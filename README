@@ -1,0 +1,3 @@
+Experimentation with Clojure.
+
+bin/clj is a REPL startup script.

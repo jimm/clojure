@@ -1,0 +1,7 @@
+(load "consts.clj")
+(load "event.clj")
+(load "track.clj")
+(load "sequence.clj")
+(load "midifile.clj")
+(load "mf2text.clj")
+(midilib/read-from "/Users/jimm/Music/MIDI files/NoFences.mid" mf2text #(println "loading track" %))

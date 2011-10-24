@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+#
+# usage: clj [-n] [-c dir] [-j jvm-opts] [-d] [-h] [script [args...]]
+#
+# Starts a Clojure shell or executes a Clojure script. Uses
+# $CLOJURE_LIB_PATH, $CLASSPATH, the contents of the directory lib, and the
+# directories src, test, and classes.
+#
+# If "-c dir" is specified, cd to that directory first. If not, then look
+# for lib, classes, or project.clj above the current directory. It's OK if
+# they aren't found.
+#
+# -d prints out the final directory and classpath and exits without starting
+# Clojure.
+
+usage() {
+    cat <<EOF
+usage: clj [-n] [-j jvm-opts] [-h] [script [args...]]
+  -c dir        cd to the specified directory first
+  -n            Do not use rlwrap
+  -j jvm-opts   Passed through to the JVM
+  -d            Debug: print out final dir and classpath and exit
+  -h            This help
+EOF
+    exit $1
+} >&2
+
+rlwrap=$(which rlwrap)
+while getopts "cdnj:h" opt ; do
+    case $opt in
+        c)
+            cd_dir="$OPTARG"
+            ;;
+        d)
+            debug=1
+            ;;
+        n)
+            rlwrap=
+            ;;
+        j)
+            jvm_args="$OPTARG"
+            ;;
+        h)
+            usage 0
+            ;;
+        *)
+            usage 1
+            ;;
+    esac
+done
+shift $(($OPTIND-1))
+
+# If dir specified, use that. Else look for lib, classes, or project.clj.
+if [ -z "$cd_dir" ] ; then
+    cd_dir=$(dirname $(findup lib || findup classes || findup project.clj || echo '.'))
+fi
+cd "$cd_dir"
+
+# Lein-like behavior: add lib jars and special dirs to classpath.
+if [ -d lib ] ; then
+    for f in lib/*.jar ; do
+        CLASSPATH="$f":"$CLASSPATH"
+    done
+fi
+for d in src test classes ; do
+    if [ -d "$d" ] ; then
+        CLASSPATH="$d":"$CLASSPATH"
+    fi
+done
+
+CP="$CLASSPATH":"$CLOJURE_LIB_PATH"
+if [ -n "$debug" ] ; then
+    pwd
+    echo $CP
+elif [ -z "$1" ] ; then
+    $rlwrap java -server -cp "$CP" $jvm_args clojure.main
+else
+    java -server -cp "$CP" $jvm_args clojure.main $*
+fi
