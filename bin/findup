@@ -1,0 +1,26 @@
+#! /bin/sh
+#
+# usage: findup file_or_dir [file_or_dir...]
+#
+# Finds any of the files or directories in the current directory or any
+# directory above and prints the path. If no such directory is found
+# (we hit the root directory), exit 1. Note: will not find files in the '/'
+# directory.
+
+start_dir="`pwd`"
+
+while [ "`pwd`" != '/' ] ; do
+    for f in $* ; do
+        if [ -e "$f" ] ; then
+            echo "`pwd`"/"$f"
+            cd "$start_dir"
+            exit 0
+        fi
+    done
+    # Keep swimming...keep swimming...swimming, swimming, swimming...
+    cd ..
+done
+
+# No parent directory
+cd "$start_dir"
+exit 1

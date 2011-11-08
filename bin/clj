@@ -13,6 +13,8 @@
 # -d prints out the final directory and classpath and exits without starting
 # Clojure.
 
+HERE=$(dirname $0)
+
 usage() {
     cat <<EOF
 usage: clj [-n] [-j jvm-opts] [-h] [script [args...]]
@@ -52,7 +54,7 @@ shift $(($OPTIND-1))
 
 # If dir specified, use that. Else look for lib, classes, or project.clj.
 if [ -z "$cd_dir" ] ; then
-    cd_dir=$(dirname $(findup lib || findup classes || findup project.clj || echo '.'))
+    cd_dir=$(dirname $($HERE/findup lib || $HERE/findup classes || $HERE/findup project.clj || echo '.'))
 fi
 cd "$cd_dir"
 
