@@ -1,3 +1,5 @@
 Experimentation with Clojure.
 
 bin/clj is a REPL startup script.
+
+See also http://github.com/jimm/euler.
