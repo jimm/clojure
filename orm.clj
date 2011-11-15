@@ -1,6 +1,8 @@
 ;;; See the find-all docs below. You need to (re)define *db-conn*.
 ;;;
 ;;; See also http://github.com/duelinmarkers/clj-record
+;;;
+;;; TODO let joins use seq insetad of string
 
 (ns jimm.orm
   (:use [clojure.contrib.sql :as sql]))
@@ -52,6 +54,7 @@
 
     :select    ; select clause; default = \"*\"
     :from      ; from clause; default is table name passed in
+    :joins     ; joins clause(s); default is none
     :where     ; where clause; default is no where clause
     :group_by  ; group by clause; default is none
     :having    ; having clause; default is none
