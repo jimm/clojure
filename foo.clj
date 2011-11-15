@@ -56,3 +56,9 @@
 
 ; now use Math/PI instead of (. Math PI)
 ; (. Math PI)
+
+(defn swap
+  [coll i j]
+  ;; If coll is a vector this is more simply written as
+  ;; (assoc v i (v j) j (v i))
+  (assoc coll i (nth coll j) j (nth coll i)))
