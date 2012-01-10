@@ -171,4 +171,68 @@
     #{[1 4] [2 4] [3 4] [1 5] [2 5] [3 5]})
  (= 300 (count (__ (into #{} (range 10))
                    (into #{} (range 30)))))
+ )
+
+;;; ****************************************************************
+
+	
+(and
+  ;; Clojure's for macro is a tremendously versatile mechanism for producing
+  ;; a sequence based on some other sequence(s). It can take some time to
+  ;; understand how to use it properly, but that investment will be paid
+  ;; back with clear, concise sequence-wrangling later. With that in mind,
+  ;; read over these for expressions and try to see how each of them
+  ;; produces the same result.
+ (= __ (for [x (range 40)
+             :when (= 1 (rem x 4))]
+         x))
+ (= __ (for [x (iterate #(+ 4 %) 0)
+             :let [z (inc x)]
+             :while (< z 40)]
+         z))
+ (= __ (for [[x y] (partition 2 (range 20))]
+         (+ x y)))
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/107
+
+(def __
+  (fn [n] (fn [x] (Math/pow x n)))
 )
+
+(and
+  ;; Lexical scope and first-class functions are two of the most basic
+  ;; building blocks of a functional language like Clojure. When you combine
+  ;; the two together, you get something very powerful called lexical
+  ;; closures. With these, you can exercise a great deal of control over the
+  ;; lifetime of your local bindings, saving their values for use later,
+  ;; long after the code you're running now has finished.
+  ;;
+  ;; It can be hard to follow in the abstract, so let's build a simple
+  ;; closure. Given a positive integer n, return a function (f x) which
+  ;; computes xn. Observe that the effect of this is to preserve the value
+  ;; of n for use outside the scope in which it is defined.
+ (= 256 ((__ 2) 16),
+    ((__ 8) 2))
+ (= [1 8 27 64] (map (__ 3) [1 2 3 4]))
+ (= [1 2 4 8 16] (map #((__ %) 2) [0 1 2 3 4])))
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/88
+
+(def __
+  (fn [s1 s2]
+    (set (for [thing (set (concat s1 s2))
+               :when (or (not (s1 thing))
+                         (not (s2 thing)))]
+           thing)))
+  )
+
+(and
+  ;; Write a function which returns the symmetric difference of two sets.
+  ;; The symmetric difference is the set of items belonging to one but not
+  ;; both of the two sets.
+ (= (__ #{1 2 3 4 5 6} #{1 3 5 7}) #{2 4 6 7})
+ (= (__ #{:a :b :c} #{}) #{:a :b :c})
+ (= (__ #{} #{4 5 6}) #{4 5 6})
+ (= (__ #{[1 2] [2 3]} #{[2 3] [3 4]}) #{[1 2] [3 4]}))
