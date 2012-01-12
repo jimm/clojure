@@ -1,4 +1,16 @@
-;; http://www.4clojure.com/problem/82#prob-title
+;;; http://www.4clojure.com/
+;;;
+;;; This file is broken up into sections: solved, solved and not yet
+;;; submitted, and unsolved. Within each section, problems aren't in any
+;;; particular order.
+
+;;; ****************************************************************
+;;; Solved
+;;; ****************************************************************
+
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/82#prob-title
 (def __
   (fn [words]
     (letfn [(swap [coll i j]
@@ -70,8 +82,8 @@
 )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/83#prob-title
 
-;; http://www.4clojure.com/problem/83#prob-title
 (def __
   (fn [& bools]
     (if (and (seq (filter identity bools)) (seq (filter not bools))) true false))
@@ -90,12 +102,10 @@
  (= true (__ true true true false)))
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/84#prob-title
+;;; Http://en.wikipedia.org/wiki/Transitive_closure
+;;; http://en.wikipedia.org/wiki/Binary_relation
 
-;;; **************** done ****************
-
-;; http://www.4clojure.com/problem/84#prob-title
-;; Http://en.wikipedia.org/wiki/Transitive_closure
-;; http://en.wikipedia.org/wiki/Binary_relation
 (def __
   (fn [input]
     (letfn [(find-next-gen [mset k]     ; Return list of values that match key
@@ -136,27 +146,6 @@
 ;;; ****************************************************************
 
 (def __
-  (fn [s]
-    (let [r (range (count s))]
-      
-
-)
-
-(and
- ;; Write a function which generates the power set of a given set. The power
- ;; set of a set x is the set of all subsets of x, including the empty set
- ;; and x itself.
- (= (__ #{1 :a}) #{#{1 :a} #{:a} #{} #{1}})
- (= (__ #{}) #{#{}})
- (= (__ #{1 2 3})
-    #{#{} #{1} #{2} #{3} #{1 2} #{1 3} #{2 3} #{1 2 3}})
- (= (count (__ (into #{} (range 10)))) 1024)
- )
-
-
-;;; ****************************************************************
-
-(def __
   (fn [coll1 coll2]
     (into #{} (for [i2 coll2 i1 coll1] [i1 i2])))
   )
@@ -175,7 +164,10 @@
 
 ;;; ****************************************************************
 
-	
+(for [x (range 40)
+      :when (= 1 (rem x 4))]
+  x)
+
 (and
   ;; Clojure's for macro is a tremendously versatile mechanism for producing
   ;; a sequence based on some other sequence(s). It can take some time to
@@ -236,3 +228,320 @@
  (= (__ #{:a :b :c} #{}) #{:a :b :c})
  (= (__ #{} #{4 5 6}) #{4 5 6})
  (= (__ #{[1 2] [2 3]} #{[2 3] [3 4]}) #{[1 2] [3 4]}))
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/97
+
+(def __
+  (fn [n]
+    (loop [n n
+           row [1]]
+      (cond (= n 1) row
+            :else (recur (dec n)
+                         (into [] (concat [1]
+                                          (map #(apply + %) (partition 2 1 row))
+                                          [1]))))))
+)
+
+(and
+  ;; Pascal's triangle is a triangle of numbers computed using the following rules:
+  ;;
+  ;; - The first row is 1.
+  ;; - Each successive row is computed by adding together adjacent numbers
+  ;;   in the row above, and adding a 1 to the beginning and end of the row.
+  ;;
+  ;; Write a function which returns the nth row of Pascal's Triangle. 
+ (= (__ 1) [1])
+ (= (map __ (range 1 6))
+     [     [1]
+          [1 1]
+         [1 2 1]
+        [1 3 3 1]
+       [1 4 6 4 1]])
+ (= (__ 11)
+    [1 10 45 120 210 252 210 120 45 10 1])
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/122
+
+(def __
+  (fn [s]
+    (Integer/parseInt s 2))
+)
+
+(and
+ ;; Convert a binary number, provided in the form of a string, to its
+ ;; numerical value.
+ (= 0     (__ "0"))
+ (= 7     (__ "111"))
+ (= 8     (__ "1000"))
+ (= 9     (__ "1001"))
+ (= 255   (__ "11111111"))
+ (= 1365  (__ "10101010101"))
+ (= 65535 (__ "1111111111111111"))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/126
+
+(def __
+  java.lang.Class
+)
+
+;; Enter a value which satisfies the following:
+(let [x __]
+  (and (= (class x) x) x))
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/120
+
+(def __
+  (fn [coll]
+    (letfn [(digit [ch] (- (int ch) (int \0)))
+            (squared-digit [ch] (* (digit ch) (digit ch)))
+            (sum-squared-digits [n] (reduce + (map squared-digit (str n))))]
+      (count (for [n coll
+                   :when (< n (sum-squared-digits n))]
+             n))))
+)
+
+(and
+ ;; Write a function which takes a collection of integers as an argument.
+ ;; Return the count of how many elements are smaller than the sum of their
+ ;; squared component digits. For example: 10 is larger than 1 squared plus
+ ;; 0 squared; whereas 15 is smaller than 1 squared plus 5 squared.
+ (= 8 (__ (range 10)))
+ (= 19 (__ (range 30)))
+ (= 50 (__ (range 100)))
+ (= 50 (__ (range 1000)))
+)
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/95
+
+(def __
+  (fn [coll]
+    (letfn [(leaf? [t]
+              (not (or (seq? t) (vector? t))))
+            (tree? [t]
+              (or (leaf? t)
+                  (and (not (leaf? t))
+                       (= 3 (count t))
+                       (tree? (nth t 1))
+                       (tree? (nth t 2)))))]
+      (tree? coll)))
+)
+
+;;; Failing on next-to-last test, but why is that NOT a tree?
+
+(and
+ ;; Write a predicate which checks whether or not a given sequence
+ ;; represents a binary tree. Each node in the tree must have a value, a
+ ;; left child, and a right child.
+ (= (__ '(:a (:b nil nil) nil))
+    true)
+ (= (__ '(:a (:b nil nil)))
+   false)
+ (= (__ [1 nil [2 [3 nil nil] [4 nil nil]]])
+   true)
+ (= (__ [1 [2 nil nil] [3 nil nil] [4 nil nil]])
+   false)
+ (= (__ [1 [2 [3 [4 nil nil] nil] nil] nil])
+   true)
+ (= (__ [1 [2 [3 [4 false nil] nil] nil] nil])
+   false)
+ (= (__ '(:a nil ()))
+   false)
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/100
+
+(def __
+  (fn [n]
+    )
+)
+
+(and
+ ;; Write a function which calculates the least common multiple. Your
+ ;; function should accept a variable number of positive integers or ratios.
+ (== (__ 2 3) 6)
+ (== (__ 5 3 7) 105)
+ (== (__ 1/3 2/5) 2)
+ (== (__ 3/4 1/6) 3/2)
+ (== (__ 7 5/7 2 3/5) 210)
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/118
+
+(def __
+  (fn [f coll]
+    (letfn [(new-map [f coll]
+              (lazy-seq
+               (when-let [s (seq coll]]
+                 (cons (f (first s)) (new-map f (rest s))))))]
+       (new-map f (seq coll))))
+)
+
+(and
+ ;; Map is one of the core elements of a functional programming language.
+ ;; Given a function f and an input sequence s, return a lazy sequence of (f
+ ;; x) for each element x in s.
+ ;;
+ ;; Special restrictions: map, map-indexed, mapcat, for
+ (= [3 4 5 6 7]
+    (__ inc [2 3 4 5 6]))
+ (= (repeat 10 nil)
+    (__ (fn [_] nil) (range 10)))
+ (= [1e6 (inc 1e6)]
+    (->> (__ inc (range))
+         (drop (dec 1e6))
+         (take 2)))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/135
+
+(def __
+  (fn [n]
+    )
+)
+
+(and
+ ;; Your friend Joe is always whining about Lisps using the prefix notation
+ ;; for math. Show him how you could easily write a function that does math
+ ;; using the infix notation. Is your favorite language that flexible, Joe?
+ ;; Write a function that accepts a variable length mathematical expression
+ ;; consisting of numbers and the operations +, -, *, and /. Assume a simple
+ ;; calculator that does not do precedence and instead just calculates left
+ ;; to right.
+ (= 7  (__ 2 + 5))
+ (= 42 (__ 38 + 48 - 2 / 2))
+ (= 8  (__ 10 / 2 - 1 * 2))
+ (= 72 (__ 20 / 2 + 2 + 4 + 8 - 6 - 10 * 9))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/128
+
+(def __
+  (fn [n]
+    )
+)
+
+(and
+ ;; A standard American deck of playing cards has four suits - spades,
+ ;; hearts, diamonds, and clubs - and thirteen cards in each suit. Two is
+ ;; the lowest rank, followed by other integers up to ten; then the jack,
+ ;; queen, king, and ace.
+ ;;
+ ;; It's convenient for humans to represent these cards as suit/rank pairs,
+ ;; such as H5 or DQ: the heart five and diamond queen respectively. But
+ ;; these forms are not convenient for programmers, so to write a card game
+ ;; you need some way to parse an input string into meaningful components.
+ ;; For purposes of determining rank, we will define the cards to be valued
+ ;; from 0 (the two) to 12 (the ace)
+ ;;
+ ;; Write a function which converts (for example) the string "SJ" into a map
+ ;; of {:suit :spade, :rank 9}. A ten will always be represented with the
+ ;; single character "T", rather than the two characters "10".
+ (= {:suit :diamond :rank 10} (__ "DQ"))
+ (= {:suit :heart :rank 3} (__ "H5"))
+ (= {:suit :club :rank 12} (__ "CA"))
+ (= (range 13) (map (comp :rank __ str)
+                    '[S2 S3 S4 S5 S6 S7
+                      S8 S9 ST SJ SQ SK SA]))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/96
+
+(def __
+  (fn [n]
+    )
+)
+
+(and
+ ;; Let us define a binary tree as "symmetric" if the left half of the tree
+ ;; is the mirror image of the right half of the tree. Write a predicate to
+ ;; determine whether or not a given binary tree is symmetric. (see To Tree,
+ ;; or not to Tree for a reminder on the tree representation we're using).
+ (= (__ '(:a (:b nil nil) (:b nil nil))) true)
+ (= (__ '(:a (:b nil nil) nil)) false)
+ (= (__ '(:a (:b nil nil) (:c nil nil))) false)
+ (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
+         [2 [3 nil [4 [6 nil nil] [5 nil nil]]] nil]])
+    true)
+ (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
+         [2 [3 nil [4 [5 nil nil] [6 nil nil]]] nil]])
+    false)
+ (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
+         [2 [3 nil [4 [6 nil nil] nil]] nil]])
+    false)
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/143
+
+(def __
+  (fn [n]
+    )
+)
+
+(and
+ ;; Create a function that computes the dot product of two sequences. You
+ ;; may assume that the vectors will have the same length.
+ (= 0 (__ [0 1 0] [1 0 0]))
+ (= 3 (__ [1 1 1] [1 1 1]))
+ (= 32 (__ [1 2 3] [4 5 6]))
+ (= 256 (__ [2 5 6] [100 10 1]))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/147
+
+(def __
+  (fn [n]
+    )
+)
+
+(and
+ ;; Write a function that, for any given input vector of numbers, returns an
+ ;; infinite lazy sequence of vectors, where each next one is constructed
+ ;; from the previous following the rules used in Pascal's Triangle. For
+ ;; example, for [3 1 2], the next row is [3 4 3 2].
+ (= (second (__ [2 3 2])) [2 5 5 2])
+ (= (take 5 (__ [1])) [[1] [1 1] [1 2 1] [1 3 3 1] [1 4 6 4 1]])
+ (= (take 2 (__ [3 1 2])) [[3 1 2] [3 4 3 2]])
+ (= (take 100 (__ [2 4 2])) (rest (take 101 (__ [2 2]))))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/85
+
+(def __
+  (fn [s]
+    (let [r (range (count s))]
+))
+)
+
+(and
+ ;; Write a function which generates the power set of a given set. The power
+ ;; set of a set x is the set of all subsets of x, including the empty set
+ ;; and x itself.
+ (= (__ #{1 :a}) #{#{1 :a} #{:a} #{} #{1}})
+ (= (__ #{}) #{#{}})
+ (= (__ #{1 2 3})
+    #{#{} #{1} #{2} #{3} #{1 2} #{1 3} #{2 3} #{1 2 3}})
+ (= (count (__ (into #{} (range 10)))) 1024)
+)
