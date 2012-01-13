@@ -8,7 +8,6 @@
 ;;; Solved
 ;;; ****************************************************************
 
-
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/82#prob-title
 (def __
@@ -318,30 +317,39 @@
 )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
+;;; http://www.4clojure.com/problem/100
 
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
+(def __
+  (fn [& nums]
+    (letfn [(gcd [a b] (if (zero? b) a (gcd b (mod a b))))]
+      (/ (reduce * nums) (reduce gcd nums))))
+)
+
+(and
+ ;; Write a function which calculates the least common multiple. Your
+ ;; function should accept a variable number of positive integers or ratios.
+ (== (__ 2 3) 6)
+ (== (__ 5 3 7) 105)
+ (== (__ 1/3 2/5) 2)
+ (== (__ 3/4 1/6) 3/2)
+ (== (__ 7 5/7 2 3/5) 210)
+)
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/95
 
 (def __
   (fn [coll]
-    (letfn [(leaf? [t]
-              (not (or (seq? t) (vector? t))))
+    (letfn [(node? [t] (and (coll? t)
+                            (= 3 (count t))
+                            (not (nil? (first t)))))
             (tree? [t]
-              (or (leaf? t)
-                  (and (not (leaf? t))
-                       (= 3 (count t))
-                       (tree? (nth t 1))
-                       (tree? (nth t 2)))))]
+              (cond (nil? t) true
+                    (node? t) (and (tree? (nth t 1))
+                                   (tree? (nth t 2)))
+                    :else false))]
       (tree? coll)))
 )
-
-;;; Failing on next-to-last test, but why is that NOT a tree?
 
 (and
  ;; Write a predicate which checks whether or not a given sequence
@@ -364,31 +372,13 @@
 )
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/100
-
-(def __
-  (fn [n]
-    )
-)
-
-(and
- ;; Write a function which calculates the least common multiple. Your
- ;; function should accept a variable number of positive integers or ratios.
- (== (__ 2 3) 6)
- (== (__ 5 3 7) 105)
- (== (__ 1/3 2/5) 2)
- (== (__ 3/4 1/6) 3/2)
- (== (__ 7 5/7 2 3/5) 210)
-)
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/118
 
 (def __
   (fn [f coll]
     (letfn [(new-map [f coll]
               (lazy-seq
-               (when-let [s (seq coll]]
+               (when-let [s (seq coll)]
                  (cons (f (first s)) (new-map f (rest s))))))]
        (new-map f (seq coll))))
 )
@@ -413,8 +403,13 @@
 ;;; http://www.4clojure.com/problem/135
 
 (def __
-  (fn [n]
-    )
+  (fn [& args]
+    (loop [arg-pairs (partition 2 (next args)) ; '((+ 2) (+ 4) (+ 8) ...)
+           answer (first args)]                ; 20
+      (if (empty? arg-pairs) answer
+          (let [[op arg] (first arg-pairs)] ; +, 2
+            (recur (next arg-pairs)
+                   (op answer arg))))))
 )
 
 (and
@@ -435,8 +430,9 @@
 ;;; http://www.4clojure.com/problem/128
 
 (def __
-  (fn [n]
-    )
+  (fn [s]
+    {:suit ({\D :diamond, \S :spade, \H :heart, \C :club} (first s))
+     :rank ({\2 0, \3 1, \4 2, \5 3, \6 4, \7 5, \8 6, \9 7, \T 8, \J 9, \Q 10, \K 11, \A 12} (second s))})
 )
 
 (and
@@ -464,38 +460,11 @@
 )
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/96
-
-(def __
-  (fn [n]
-    )
-)
-
-(and
- ;; Let us define a binary tree as "symmetric" if the left half of the tree
- ;; is the mirror image of the right half of the tree. Write a predicate to
- ;; determine whether or not a given binary tree is symmetric. (see To Tree,
- ;; or not to Tree for a reminder on the tree representation we're using).
- (= (__ '(:a (:b nil nil) (:b nil nil))) true)
- (= (__ '(:a (:b nil nil) nil)) false)
- (= (__ '(:a (:b nil nil) (:c nil nil))) false)
- (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
-         [2 [3 nil [4 [6 nil nil] [5 nil nil]]] nil]])
-    true)
- (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
-         [2 [3 nil [4 [5 nil nil] [6 nil nil]]] nil]])
-    false)
- (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
-         [2 [3 nil [4 [6 nil nil] nil]] nil]])
-    false)
-)
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/143
 
 (def __
-  (fn [n]
-    )
+  (fn [c1 c2]
+    (reduce + (map * c1 c2)))
 )
 
 (and
@@ -511,8 +480,12 @@
 ;;; http://www.4clojure.com/problem/147
 
 (def __
-  (fn [n]
-    )
+  (fn [v]
+    (letfn [(next-pascal-row [v]
+              (into [] (concat [(first v)]
+                               (map #(apply + %) (partition 2 1 v))
+                               [(last v)])))]
+      (lazy-seq (iterate next-pascal-row v))))
 )
 
 (and
@@ -531,8 +504,36 @@
 
 (def __
   (fn [s]
-    (let [r (range (count s))]
-))
+    ;; The following functions are from clojure.contrib.combinatorics/permutations
+    (letfn [(index-combinations [n cnt]
+              (lazy-seq
+               (let [c (vec (cons nil (for [j (range 1 (inc n))] (+ j cnt (- (inc n)))))),
+                     iter-comb
+                     (fn iter-comb [c j]
+                       (if (> j n) nil
+                           (let [c (assoc c j (dec (c j)))]
+                             (if (< (c j) j) [c (inc j)]
+                                 (loop [c c, j j]
+                                   (if (= j 1) [c j]
+                                       (recur (assoc c (dec j) (dec (c j))) (dec j)))))))),
+                     step
+                     (fn step [c j]
+                       (cons (rseq (subvec c 1 (inc n)))
+                             (lazy-seq (let [next-step (iter-comb c j)]
+                                         (when next-step (step (next-step 0) (next-step 1)))))))]
+                 (step c 1))))
+            (combinations [items n]      
+              (let [v-items (vec (reverse items))]
+                (if (zero? n) (list ())
+                    (let [cnt (count items)]
+                      (cond (> n cnt) nil
+                            (= n cnt) (list (seq items))
+                            :else
+                            (map #(map v-items %) (index-combinations n cnt)))))))]
+      ;; Here we go
+      (set (for [i (range (inc (count s)))
+                 c (combinations s i)]
+             (set c)))))
 )
 
 (and
@@ -544,4 +545,55 @@
  (= (__ #{1 2 3})
     #{#{} #{1} #{2} #{3} #{1 2} #{1 3} #{2 3} #{1 2 3}})
  (= (count (__ (into #{} (range 10)))) 1024)
+)
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/96
+
+(def __
+ ;;  (fn [coll]
+ ;;    (letfn [(node? [t] (and (coll? t)
+ ;;                            (= 3 (count t))
+ ;;                            (not (nil? (first t)))))
+ ;;            (mirrors? [t1 t2]
+ ;;              (cond (node? t) (let [l (nth t 1)
+ ;;                                    r (nth t 2)]
+ ;;                                (cond
+ ;;                                 (and (nil? l)
+ ;;                                      (nil? r)) true
+ ;;                                 (and (node? l)
+ ;;                                      (node? r)
+                                                
+
+ ;; (and (tree? (nth t 1))
+ ;;                                   (tree? (nth t 2)))
+ ;;                    :else false))]
+ ;;      (tree? coll)))
+)
+
+(and
+ ;; Let us define a binary tree as "symmetric" if the left half of the tree
+ ;; is the mirror image of the right half of the tree. Write a predicate to
+ ;; determine whether or not a given binary tree is symmetric. (see To Tree,
+ ;; or not to Tree for a reminder on the tree representation we're using).
+ (= (__ '(:a (:b nil nil) (:b nil nil))) true)
+ (= (__ '(:a (:b nil nil) nil)) false)
+ (= (__ '(:a (:b nil nil) (:c nil nil))) false)
+ (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
+           [2 [3 nil [4 [6 nil nil] [5 nil nil]]] nil]])
+    true)
+ (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
+           [2 [3 nil [4 [5 nil nil] [6 nil nil]]] nil]])
+    false)
+ (= (__ [1 [2 nil [3 [4 [5 nil nil] [6 nil nil]] nil]]
+         [2 [3 nil [4 [6 nil nil] nil]] nil]])
+    false)
 )
