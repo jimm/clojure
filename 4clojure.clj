@@ -3,6 +3,10 @@
 ;;; This file is broken up into sections: solved, solved and not yet
 ;;; submitted, and unsolved. Within each section, problems aren't in any
 ;;; particular order.
+;;;
+;;; Each problem defines a variable called "__" that is usually a function.
+;;; After the definition is an expression that contains the tests for the
+;;; problem, using __.
 
 ;;; ****************************************************************
 ;;; Solved
@@ -548,35 +552,28 @@
 )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/96
 
 (def __
- ;;  (fn [coll]
- ;;    (letfn [(node? [t] (and (coll? t)
- ;;                            (= 3 (count t))
- ;;                            (not (nil? (first t)))))
- ;;            (mirrors? [t1 t2]
- ;;              (cond (node? t) (let [l (nth t 1)
- ;;                                    r (nth t 2)]
- ;;                                (cond
- ;;                                 (and (nil? l)
- ;;                                      (nil? r)) true
- ;;                                 (and (node? l)
- ;;                                      (node? r)
-                                                
-
- ;; (and (tree? (nth t 1))
- ;;                                   (tree? (nth t 2)))
- ;;                    :else false))]
- ;;      (tree? coll)))
+  (fn [coll]
+    (letfn [(node? [t] (and (coll? t)
+                            (= 3 (count t))
+                            (not (nil? (first t)))))
+            (node-val [t] (nth t 0))
+            (lchild [t] (nth t 1))
+            (rchild [t] (nth t 2))
+            (mirrors? [t1 t2]
+              (cond
+               (and (nil? t1)
+                    (nil? t2)) true
+               (and (node? t1)
+                    (node? t2)) (and (= (node-val t1) (node-val t2))
+                                     (mirrors? (lchild t1) (rchild t2))
+                                     (mirrors? (rchild t1) (lchild t2)))
+               (and (not (node? t1))
+                    (not (node? t2))) (= (t1 t2))
+               :else false))]
+      (mirrors? (lchild coll) (rchild coll))))
 )
 
 (and
@@ -597,3 +594,51 @@
          [2 [3 nil [4 [6 nil nil] nil]] nil]])
     false)
 )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/146
+
+(def __
+  (fn [m]
+    (apply merge
+           (for [k (keys m)
+                 :let [sub-map (get m k)]
+                 v (keys sub-map)]
+             {(vector k v) (get sub-map v)})))
+  )
+
+(and
+ ;; Because Clojure's for macro allows you to "walk" over multiple sequences
+ ;; in a nested fashion, it is excellent for transforming all sorts of
+ ;; sequences. If you don't want a sequence as your final output (say you
+ ;; want a map), you are often still best-off using for, because you can
+ ;; produce a sequence and feed it into a map, for example.
+
+ ;; For this problem, your goal is to "flatten" a map of hashmaps. Each key
+ ;; in your output map should be the "path" [1] that you would have to take
+ ;; in the original map to get to a value, so for example {1 {2 3}} should
+ ;; result in {[1 2] 3}. You only need to flatten one level of maps: if one
+ ;; of the values is a map, just leave it alone.
+
+ ;; [1] That is, (get-in original [k1 k2]) should be the same as (get result
+ ;; [k1 k2])
+ (= (__ '{a {p 1, q 2}
+          b {m 3, n 4}})
+    '{[a p] 1, [a q] 2
+      [b m] 3, [b n] 4})
+ (= (__ '{[1] {a b c d}
+          [2] {q r s t u v w x}})
+    '{[[1] a] b, [[1] c] d,
+      [[2] q] r, [[2] s] t,
+      [[2] u] v, [[2] w] x})
+ (= (__ '{m {1 [a b c] 3 nil}})
+    '{[m 1] [a b c], [m 3] nil})
+ )
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
