@@ -655,14 +655,16 @@
 ;;; ****************************************************************
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/102
 
 (def __
   (fn [s]
+    (apply str (concat (list (first s))
+                       (for [pair (partition 2 1 s)]
+                         (cond
+                          (= \- (first pair)) (.toUpperCase (str (second pair)))
+                          (= \- (second pair)) ""
+                          :else (second pair)))))
     )
   )
 
@@ -681,8 +683,14 @@
 ;;; http://www.4clojure.com/problem/86
 
 (def __
-  (fn [s]
-    )
+  (fn [n]
+    (let [char-to-digit (fn [n] (- (int n) (int \0)))
+          sum-of-squares-of-digits (fn [n] (apply + (map #(* (char-to-digit %) (char-to-digit %)) (str n))))]
+      (loop [n n
+             seen #{}]
+        (cond (= n 1) true
+              (some seen #{n}) false
+              :else (recur (sum-of-squares-of-digits n) (conj seen n))))))
   )
 
 (and
@@ -702,8 +710,8 @@
 ;;; http://www.4clojure.com/problem/98
 
 (def __
-  (fn [s]
-    )
+  (fn [f d]
+    (into #{} (map #(into #{} %) (vals (group-by f d)))))
   )
 
 (and
@@ -722,10 +730,14 @@
  )
 
 ;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/105
 
 (def __
-  (fn [s]
+  (fn [coll]
     )
   )
 
