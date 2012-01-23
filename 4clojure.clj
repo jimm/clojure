@@ -730,15 +730,17 @@
  )
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/105
 
 (def __
   (fn [coll]
-    )
+    (loop [coll coll
+           key nil
+           m {}]
+      (let [val (first coll)]
+        (cond (empty? coll) m
+              (keyword? val) (recur (next coll) val (assoc m val []))
+              :else (recur (next coll) key (assoc m key (conj (get m key) val)))))))
   )
 
 (and
@@ -755,32 +757,33 @@
 ;;; http://www.4clojure.com/problem/115
 
 (def __
-  (fn [s]
-    )
+  (fn [n]
+    (letfn [(char-to-digit [c] (- (int c) (int \0)))
+            (sum-of-digits [s] (apply + (map char-to-digit s)))]
+      (let [s (str n)
+            len (.length s)]
+        (= (sum-of-digits (.substring s 0 (/ len 2)))
+           (sum-of-digits (.substring (str s) (/ (if (even? len) len (inc len)) 2)))))))
   )
 
 (and
  ;; A balanced number is one whose component digits have the same sum on the
  ;; left and right halves of the number. Write a function which accepts an
  ;; integer n, and returns true iff n is balanced.
-	
-(= true (__ 11))
-	
-(= true (__ 121))
-	
-(= false (__ 123))
-	
-(= true (__ 0))
-	
-(= false (__ 88099))
-	
-(= true (__ 89098))
-	
-(= true (__ 89089))
-	
-(= (take 20 (filter __ (range)))
-   [0 1 2 3 4 5 6 7 8 9 11 22 33 44 55 66 77 88 99 101])
+ (= true (__ 11))
+ (= true (__ 121))
+ (= false (__ 123))
+ (= true (__ 0))
+ (= false (__ 88099))
+ (= true (__ 89098))
+ (= true (__ 89089))
+ (= (take 20 (filter __ (range)))
+    [0 1 2 3 4 5 6 7 8 9 11 22 33 44 55 66 77 88 99 101])
  )
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/93
@@ -821,16 +824,10 @@
  ;; Your function should accept an initial sequence of numbers, and return
  ;; an infinite lazy sequence of pronunciations, each element being a
  ;; pronunciation of the previous element.
-
-
-	
-(= [[1 1] [2 1] [1 2 1 1]] (take 3 (__ [1])))
-	
-(= [3 1 2 4] (first (__ [1 1 1 4 4])))
-	
-(= [1 1 1 3 2 1 3 2 1 1] (nth (__ [1]) 6))
-	
-(= 338 (count (nth (__ [3 2]) 15)))
+ (= [[1 1] [2 1] [1 2 1 1]] (take 3 (__ [1])))
+ (= [3 1 2 4] (first (__ [1 1 1 4 4])))
+ (= [1 1 1 3 2 1 3 2 1 1] (nth (__ [1]) 6))
+ (= 338 (count (nth (__ [3 2]) 15)))
  )
 
 ;;; ****************************************************************
