@@ -9,6 +9,21 @@
 ;;; problem, using __.
 
 ;;; ****************************************************************
+;;; Blank template
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/NNNN
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ )
+
+;;; ****************************************************************
 ;;; Solved
 ;;; ****************************************************************
 
@@ -596,10 +611,6 @@
 )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/146
 
 (def __
@@ -640,5 +651,328 @@
  )
 
 ;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
 ;;; Unsolved
 ;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/102
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; When working with java, you often need to create an object with
+ ;; fieldsLikeThis, but you'd rather work with a hashmap that has
+ ;; :keys-like-this until it's time to convert. Write a function which takes
+ ;; lower-case hyphen-separated strings and converts them to camel-case
+ ;; strings.
+ (= (__ "something") "something")
+ (= (__ "multi-word-key") "multiWordKey")
+ (= (__ "leaveMeAlone") "leaveMeAlone")
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/86
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Happy numbers are positive integers that follow a particular formula:
+ ;; take each individual digit, square it, and then sum the squares to get a
+ ;; new number. Repeat with the new number and eventually, you might get to
+ ;; a number whose squared sum is 1. This is a happy number. An unhappy
+ ;; number (or sad number) is one that loops endlessly. Write a function
+ ;; that determines if a number is happy or not.
+ (= (__ 7) true)
+ (= (__ 986543210) true)
+ (= (__ 2) false)
+ (= (__ 3) false)
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/98
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; A function f defined on a domain D induces an equivalence relation on D,
+ ;; as follows: a is equivalent to b with respect to f if and only if (f a)
+ ;; is equal to (f b). Write a function with arguments f and D that computes
+ ;; the equivalence classes of D with respect to f.
+ (= (__ #(* % %) #{-2 -1 0 1 2})
+    #{#{0} #{1 -1} #{2 -2}})
+ (= (__ #(rem % 3) #{0 1 2 3 4 5 })
+    #{#{0 3} #{1 4} #{2 5}})
+ (= (__ identity #{0 1 2 3 4})
+    #{#{0} #{1} #{2} #{3} #{4}})
+ (= (__ (constantly true) #{0 1 2 3 4})
+    #{#{0 1 2 3 4}})
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/105
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given an input sequence of keywords and numbers, create a map such that
+ ;; each key in the map is a keyword, and the value is a sequence of all the
+ ;; numbers (if any) between it and the next keyword in the sequence.
+ (= {} (__ []))
+ (= {:a [1]} (__ [:a 1]))
+ (= {:a [1], :b [2]} (__ [:a 1, :b 2]))
+ (= {:a [1 2 3], :b [], :c [4]} (__ [:a 1 2 3 :b :c 4]))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/115
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; A balanced number is one whose component digits have the same sum on the
+ ;; left and right halves of the number. Write a function which accepts an
+ ;; integer n, and returns true iff n is balanced.
+	
+(= true (__ 11))
+	
+(= true (__ 121))
+	
+(= false (__ 123))
+	
+(= true (__ 0))
+	
+(= false (__ 88099))
+	
+(= true (__ 89098))
+	
+(= true (__ 89089))
+	
+(= (take 20 (filter __ (range)))
+   [0 1 2 3 4 5 6 7 8 9 11 22 33 44 55 66 77 88 99 101])
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/93
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write a function which flattens any nested combination of sequential
+ ;; things (lists, vectors, etc.), but maintains the lowest level sequential
+ ;; items. The result should be a sequence of sequences with only one level
+ ;; of nesting.
+ (= (__ [["Do"] ["Nothing"]])
+    [["Do"] ["Nothing"]])
+ (= (__ [[[[:a :b]]] [[:c :d]] [:e :f]])
+    [[:a :b] [:c :d] [:e :f]])
+ (= (__ '((1 2)((3 4)((((5 6)))))))
+    '((1 2)(3 4)(5 6)))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/110
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write a function that returns a lazy sequence of "pronunciations" of a
+ ;; sequence of numbers. A pronunciation of each element in the sequence
+ ;; consists of the number of repeating identical numbers and the number
+ ;; itself. For example, [1 1] is pronounced as [2 1] ("two ones"), which in
+ ;; turn is pronounced as [1 2 1 1] ("one two, one one").
+ ;;
+ ;; Your function should accept an initial sequence of numbers, and return
+ ;; an infinite lazy sequence of pronunciations, each element being a
+ ;; pronunciation of the previous element.
+
+
+	
+(= [[1 1] [2 1] [1 2 1 1]] (take 3 (__ [1])))
+	
+(= [3 1 2 4] (first (__ [1 1 1 4 4])))
+	
+(= [1 1 1 3 2 1 3 2 1 1] (nth (__ [1]) 6))
+	
+(= 338 (count (nth (__ [3 2]) 15)))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/104
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; This is the inverse of Problem 92, but much easier. Given an integer
+ ;; smaller than 4000, return the corresponding roman numeral in uppercase,
+ ;; adhering to the subtractive principle.
+ (= "I" (__ 1))
+ (= "XXX" (__ 30))
+ (= "IV" (__ 4))
+ (= "CXL" (__ 140))
+ (= "DCCCXXVII" (__ 827))
+ (= "MMMCMXCIX" (__ 3999))
+ (= "XLVIII" (__ 48))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/108
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given any number of sequences, each sorted from smallest to largest,
+ ;; find the smallest number which appears in each sequence. The sequences
+ ;; may be infinite, so be careful to search lazily.
+	
+ (= 3 (__ [3 4 5]))
+ (= 4 (__ [1 2 3 4 5 6 7] [0.5 3/2 4 19]))
+ (= 7 (__ (range) (range 0 100 7/6) [2 3 5 7 11 13]))
+ (= 64 (__ (map #(* % % %) (range)) ;; perfect cubes
+           (filter #(zero? (bit-and % (dec %))) (range)) ;; powers of 2
+           (iterate inc 20))) ;; at least as large as 20
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/114
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; take-while is great for filtering sequences, but it limited: you can
+ ;; only examine a single item of the sequence at a time. What if you need
+ ;; to keep track of some state as you go over the sequence?
+ ;;
+ ;; Write a function which accepts an integer n, a predicate p, and a
+ ;; sequence. It should return a lazy sequence of items in the list up to,
+ ;; but not including, the nth item that satisfies the predicate.
+ (= [2 3 5 7 11 13]
+    (__ 4 #(= 2 (mod % 3))
+        [2 3 5 7 11 13 17 19 23]))
+ (= ["this" "is" "a" "sentence"]
+    (__ 3 #(some #{\i} %)
+        ["this" "is" "a" "sentence" "i" "wrote"]))
+ (= ["this" "is"]
+    (__ 1 #{"a"}
+        ["this" "is" "a" "sentence" "i" "wrote"]))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/137
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write a function which returns a sequence of digits of a non-negative
+ ;; number (first argument) in numerical system with an arbitrary base
+ ;; (second argument). Digits should be represented with their integer
+ ;; values, e.g. 15 would be [1 5] in base 10, [1 1 1 1] in base 2 and [15]
+ ;; in base 16.
+ (= [1 2 3 4 5 0 1] (__ 1234501 10))
+ (= [0] (__ 0 11))
+ (= [1 0 0 1] (__ 9 2))
+ (= [1 0] (let [n (rand-int 100000)](__ n n)))
+ (= [16 18 5 24 15 1] (__ Integer/MAX_VALUE 42))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; A balanced prime is a prime number which is also the mean of the primes
+ ;; directly before and after it in the sequence of valid primes. Create a
+ ;; function which takes an integer n, and returns true iff it is a balanced
+ ;; prime.
+ (= false (__ 4))
+ (= true (__ 563))
+ (= 1103 (nth (filter __ (range)) 15))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/132
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write a function that takes a two-argument predicate, a value, and a
+ ;; collection; and returns a new collection where the value is inserted
+ ;; between every two items that satisfy the predicate.
+ (= '(1 :less 6 :less 7 4 3) (__ < :less [1 6 7 4 3]))
+ (= '(2) (__ > :more [2]))
+ (= [0 1 :x 2 :x 3 :x 4]  (__ #(and (pos? %) (< % %2)) :x (range 5)))
+ (empty? (__ > :more ()))
+ (= [0 1 :same 1 2 3 :same 5 8 13 :same 21]
+    (take 12 (->> [0 1]
+                  (iterate (fn [[a b]] [b (+ a b)]))
+                  (map first) ; fibonacci numbers
+                  (__ (fn [a b] ; both even or both odd
+                        (= (mod a 2) (mod b 2)))
+                      :same))))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/103
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given a sequence S consisting of n elements generate all k-combinations
+ ;; of S, i. e. generate all possible sets consisting of k distinct elements
+ ;; taken from S. The number of k-combinations for a sequence is equal to
+ ;; the binomial coefficient.
+ (= (__ 1 #{4 5 6}) #{#{4} #{5} #{6}})
+ (= (__ 10 #{4 5 6}) #{})
+ (= (__ 2 #{0 1 2}) #{#{0 1} #{0 2} #{1 2}})
+ (= (__ 3 #{0 1 2 3 4}) #{#{0 1 2} #{0 1 3} #{0 1 4} #{0 2 3} #{0 2 4}
+                          #{0 3 4} #{1 2 3} #{1 2 4} #{1 3 4} #{2 3 4}})
+ (= (__ 4 #{[1 2 3] :a "abc" "efg"}) #{#{[1 2 3] :a "abc" "efg"}})
+ (= (__ 2 #{[1 2 3] :a "abc" "efg"}) #{#{[1 2 3] :a} #{[1 2 3] "abc"} #{[1 2 3] "efg"}
+                                       #{:a "abc"} #{:a "efg"} #{"abc" "efg"}})
+ )
