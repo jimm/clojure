@@ -778,41 +778,20 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/93
-
-(def __
-  (fn [coll]
-    
-    )
-  )
-
-(and
- ;; Write a function which flattens any nested combination of sequential
- ;; things (lists, vectors, etc.), but maintains the lowest level sequential
- ;; items. The result should be a sequence of sequences with only one level
- ;; of nesting.
- (= (__ [["Do"] ["Nothing"]])
-    [["Do"] ["Nothing"]])
- (= (__ [[[[:a :b]]] [[:c :d]] [:e :f]])
-    [[:a :b] [:c :d] [:e :f]])
- (= (__ '((1 2)((3 4)((((5 6)))))))
-    '((1 2)(3 4)(5 6)))
- )
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/110
 
 (def __
   (fn [coll]
-    )
+    (let [pronunciation (fn [c]
+                          (loop [c c
+                                 prev-val nil
+                                 count 0
+                                 p []]
+                            (cond (nil? c) (concat p [count prev-val])
+                                  (= (first c) prev-val) (recur (next c) prev-val (inc count) p)
+                                  (nil? prev-val) (recur (next c) (first c) 1 [])
+                                  :else (recur (next c) (first c) 1 (concat p [count prev-val])))))]
+      (drop 1 (iterate pronunciation coll))))
   )
 
 (and
@@ -835,8 +814,22 @@
 ;;; http://www.4clojure.com/problem/104
 
 (def __
-  (fn [s]
-    )
+  (fn [n]
+    (let [place-digit (fn [place] (mod (int (/ n place)) 10))
+          thousands (place-digit 1000)
+          hundreds (place-digit 100)
+          tens (place-digit 10)
+          ones (place-digit 1)
+          to-roman (fn [x ones fives tens]
+                     (cond (= x 9) (str ones tens)
+                           (>= x 5) (apply str fives (repeat (- x 5) ones))
+                           (= x 4) (str ones fives)
+                           :else (apply str (repeat x ones)))
+                     )]
+    (str (to-roman thousands "M" "?" "?")
+         (to-roman hundreds "C" "D" "M")
+         (to-roman tens "X" "L" "C")
+         (to-roman ones "I" "V" "X"))))
   )
 
 (and
@@ -850,6 +843,40 @@
  (= "DCCCXXVII" (__ 827))
  (= "MMMCMXCIX" (__ 3999))
  (= "XLVIII" (__ 48))
+ )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/93
+
+(def __
+  (fn [coll]
+    (let [nseq? (complement sequential?)
+          terminal? (fn [x] (or (nseq? x)
+                                (every? nseq? x)))]
+      
+      )
+    )
+  )
+
+(and
+ ;; Write a function which flattens any nested combination of sequential
+ ;; things (lists, vectors, etc.), but maintains the lowest level sequential
+ ;; items. The result should be a sequence of sequences with only one level
+ ;; of nesting.
+ (= (__ [["Do"] ["Nothing"]])
+    [["Do"] ["Nothing"]])
+ (= (__ [[[[:a :b]]] [[:c :d]] [:e :f]])
+    [[:a :b] [:c :d] [:e :f]])
+ (= (__ '((1 2)((3 4)((((5 6)))))))
+    '((1 2)(3 4)(5 6)))
  )
 
 ;;; ****************************************************************
@@ -877,8 +904,7 @@
 ;;; http://www.4clojure.com/problem/114
 
 (def __
-  (fn [s]
-    )
+  (fn [n pred coll]
   )
 
 (and
@@ -928,7 +954,7 @@
  )
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/
+;;; http://www.4clojure.com/problem/????????
 
 (def __
   (fn [s]
@@ -949,7 +975,7 @@
 ;;; http://www.4clojure.com/problem/132
 
 (def __
-  (fn [s]
+  (fn [pred val coll]
     )
   )
 
@@ -974,8 +1000,35 @@
 ;;; http://www.4clojure.com/problem/103
 
 (def __
-  (fn [s]
-    )
+  (fn [n coll]
+    (letfn [(index-combinations
+              [n cnt]
+              (lazy-seq
+               (let [c (vec (cons nil (for [j (range 1 (inc n))] (+ j cnt (- (inc n)))))),
+                     iter-comb
+                     (fn iter-comb [c j]
+                       (if (> j n) nil
+                           (let [c (assoc c j (dec (c j)))]
+                             (if (< (c j) j) [c (inc j)]
+                                 (loop [c c, j j]
+                                   (if (= j 1) [c j]
+                                       (recur (assoc c (dec j) (dec (c j))) (dec j)))))))),
+                     step
+                     (fn step [c j]
+                       (cons (rseq (subvec c 1 (inc n)))
+                             (lazy-seq (let [next-step (iter-comb c j)]
+                                         (when next-step (step (next-step 0) (next-step 1)))))))]
+                 (step c 1))))
+            (combinations
+              [items n]      
+              (let [v-items (vec (reverse items))]
+                (if (zero? n) (list ())
+                    (let [cnt (count items)]
+                      (cond (> n cnt) nil
+                            (= n cnt) (list (seq items))
+                            :else
+                            (map #(map v-items %) (index-combinations n cnt)))))))]
+      (combinations coll n)))
   )
 
 (and
