@@ -846,14 +846,6 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/93
 
 (def __
@@ -861,9 +853,13 @@
     (let [nseq? (complement sequential?)
           terminal? (fn [x] (or (nseq? x)
                                 (every? nseq? x)))]
-      
-      )
-    )
+      (letfn [(mostly-flatten [c]
+                (loop [c c
+                       answer []]
+                  (cond (nil? c) answer
+                        (terminal? (first c)) (recur (next c) (conj answer (first c)))
+                        :else (recur (concat (mostly-flatten (first c)) (rest c)) answer))))]
+        (mostly-flatten coll))))
   )
 
 (and
@@ -880,6 +876,38 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/137
+
+(def __
+  (fn [n radix]
+    (reverse (loop [n n
+                    digits []]
+               (if (zero? n) (if (empty? digits) [0] digits)
+                   (recur (int (/ n radix)) (conj digits (mod n radix)))))))
+  )
+
+(and
+ ;; Write a function which returns a sequence of digits of a non-negative
+ ;; number (first argument) in numerical system with an arbitrary base
+ ;; (second argument). Digits should be represented with their integer
+ ;; values, e.g. 15 would be [1 5] in base 10, [1 1 1 1] in base 2 and [15]
+ ;; in base 16.
+ (= [1 2 3 4 5 0 1] (__ 1234501 10))
+ (= [0] (__ 0 11))
+ (= [1 0 0 1] (__ 9 2))
+ (= [1 0] (let [n (rand-int 100000)](__ n n)))
+ (= [16 18 5 24 15 1] (__ Integer/MAX_VALUE 42))
+ )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/108
 
 (def __
@@ -891,7 +919,6 @@
  ;; Given any number of sequences, each sorted from smallest to largest,
  ;; find the smallest number which appears in each sequence. The sequences
  ;; may be infinite, so be careful to search lazily.
-	
  (= 3 (__ [3 4 5]))
  (= 4 (__ [1 2 3 4 5 6 7] [0.5 3/2 4 19]))
  (= 7 (__ (range) (range 0 100 7/6) [2 3 5 7 11 13]))
@@ -924,33 +951,6 @@
  (= ["this" "is"]
     (__ 1 #{"a"}
         ["this" "is" "a" "sentence" "i" "wrote"]))
- )
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/137
-
-(def __
-  (fn [n radix]
-    (if (zero? n) n
-        (loop [n n
-;; not quite; need vector of vals not one val
-               val (mod n radix)]
-          (let [rem (- n val)]
-            (if (zero? rem) val
-                (recur rem (mod n radix)))))))
-  )
-
-(and
- ;; Write a function which returns a sequence of digits of a non-negative
- ;; number (first argument) in numerical system with an arbitrary base
- ;; (second argument). Digits should be represented with their integer
- ;; values, e.g. 15 would be [1 5] in base 10, [1 1 1 1] in base 2 and [15]
- ;; in base 16.
- (= [1 2 3 4 5 0 1] (__ 1234501 10))
- (= [0] (__ 0 11))
- (= [1 0 0 1] (__ 9 2))
- (= [1 0] (let [n (rand-int 100000)](__ n n)))
- (= [16 18 5 24 15 1] (__ Integer/MAX_VALUE 42))
  )
 
 ;;; ****************************************************************
