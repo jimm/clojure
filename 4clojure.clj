@@ -900,38 +900,16 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/108
-
-(def __
-  (fn [& seqs]
-    )
-  )
-
-(and
- ;; Given any number of sequences, each sorted from smallest to largest,
- ;; find the smallest number which appears in each sequence. The sequences
- ;; may be infinite, so be careful to search lazily.
- (= 3 (__ [3 4 5]))
- (= 4 (__ [1 2 3 4 5 6 7] [0.5 3/2 4 19]))
- (= 7 (__ (range) (range 0 100 7/6) [2 3 5 7 11 13]))
- (= 64 (__ (map #(* % % %) (range)) ;; perfect cubes
-           (filter #(zero? (bit-and % (dec %))) (range)) ;; powers of 2
-           (iterate inc 20))) ;; at least as large as 20
- )
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/114
 
 (def __
   (fn [n pred coll]
+    (lazy-seq (loop [n (dec n)
+                     vals []
+                     coll coll]
+                (cond (or (and (<= n 0) (pred (first coll))) (nil? coll)) vals
+                      (pred (first coll)) (recur (dec n) (conj vals (first coll)) (next coll))
+                      :else (recur n (conj vals (first coll)) (next coll))))))
   )
 
 (and
@@ -954,11 +932,62 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/148
+
+(def __
+  (fn [n a b]
+    (letfn [(num-factors [n fac]
+              (+ (long (/ n fac))
+                 (if (zero? (rem n fac)) 0 1)))
+            (sum-factors [n fac]
+              (let [num-facs (num-factors n fac)]
+                (* (/ (* num-facs (dec num-facs)) 2) ; (sum (range num-factors))
+                   fac)))]
+      (- (+ (sum-factors n a) (sum-factors n b))
+         (sum-factors n (* a b)))))
+)
+
+(and
+ ;; Write a function which calculates the sum of all natural numbers under n
+ ;; (first argument) which are evenly divisible by at least one of a and b
+ ;; (second and third argument). Numbers a and b are guaranteed to be
+ ;; coprimes.
+ ;;
+ ;; Note: Some test cases have a very large n, so the most obvious solution
+ ;; will exceed the time limit.
+ (= 0 (__ 3 17 11))
+ (= 23 (__ 10 3 5))
+ (= 233168 (__ 1000 3 5))
+ (= "2333333316666668" (str (__ 100000000 3 5)))
+ (= "110389610389889610389610"
+    (str (__ (* 10000 10000 10000) 7 11)))
+ (= "1277732511922987429116"
+    (str (__ (* 10000 10000 10000) 757 809)))
+ (= "4530161696788274281"
+    (str (__ (* 10000 10000 1000) 1597 3571)))
+ )
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/116
 
 (def __
-  (fn [s]
-    )
+  (fn [n]
+    (letfn [(prime?
+              ;; Returns true if n is prime. Does this by seeing if there is any divisor
+              ;; other than 1 in the numbers up to (sqrt n).
+              [x]
+              (cond (< x 2) false
+                    (== x 2) true
+                    (even? x) false
+                    :else (let [max-divisor-check (/ (- (int (Math/sqrt x)) 2) 2)] ; subtract 2 because we start iterating at 3
+                            (not-any? #(zero? (unchecked-remainder x %))
+                                      (take max-divisor-check (iterate #(+ % 2) 3))))))
+            (prev-prime [n] (first (drop-while #(not (prime? %)) (iterate dec (dec n)))))
+            (next-prime [n] (first (drop-while #(not (prime? %)) (iterate inc (inc n)))))]
+      (cond (not (prime? n)) false
+            (<= n 2) false
+            (= n (/ (+ (prev-prime n) (next-prime n)) 2)) true
+            :else false)))
   )
 
 (and
@@ -972,11 +1001,76 @@
  )
 
 ;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/108
+
+;; Wrong. This finds the min value from all sequences, not the min that
+;; appears in all sequences.
+
+;; DEBUG
+(defn remove-all-upto [minval seqs]
+  (apply map (list (partial drop-while #(< % minval)) seqs)))
+(defn find-min [coll] (apply min-key (comp min second)
+                             (map-indexed #(list %1 (first %2)) coll)))
+
+
+(def __
+  (fn [& seqs]
+    (letfn [(remove-all-upto [minval seqs]
+              (apply map (list (partial drop-while #(< % minval)) seqs)))
+            (find-min [coll] (apply min-key (comp min second)
+                                    (map-indexed #(list %1 (first %2)) coll)))]
+      (loop [seqs seqs
+             minval nil]
+        (if (nil? seqs)
+          minval
+          (let [[idx new-minval] (find-min seqs)
+                next-minval (if (or (nil? minval) (< new-minval minval)) new-minval minval)
+                new-seqs (remove-all-upto next-minval seqs)]
+            (if (or (nil? minval) (< new-minval minval))
+              (recur (remove-all-upto next-minval seqs) next-minval)
+              next-minval))))))
+  )
+
+(and
+ ;; Given any number of sequences, each sorted from smallest to largest,
+ ;; find the smallest number which appears in each sequence. The sequences
+ ;; may be infinite, so be careful to search lazily.
+ (= 3 (__ [3 4 5]))
+ (= 4 (__ [1 2 3 4 5 6 7] [0.5 3/2 4 19]))
+ (= 7 (__ (range) (range 0 100 7/6) [2 3 5 7 11 13]))
+ (= 64 (__ (map #(* % % %) (range)) ;; perfect cubes
+           (filter #(zero? (bit-and % (dec %))) (range)) ;; powers of 2
+           (iterate inc 20))) ;; at least as large as 20
+ )
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/132
+
+;; TODO hanging on last test because __ is not lazy
 
 (def __
   (fn [pred val coll]
-    )
+    (flatten (loop [coll coll
+                    prev-item nil
+                    answer []]
+               ;; (println "coll" coll "prev-item" prev-item "answer" answer) ; DEBUG
+               (if (or (empty? coll) (nil? coll))
+                 answer
+                 (let [item (first coll)
+                       item-pred-val (if (nil? prev-item) false (pred prev-item item))]
+                   ;; (println "item" item "item-pred-val" item-pred-val) ; DEBUG
+                   (recur (next coll) item (conj answer
+                                                 (if item-pred-val
+                                                   [val item]
+                                                   item))))))))
   )
 
 (and
@@ -1045,3 +1139,208 @@
  (= (__ 2 #{[1 2 3] :a "abc" "efg"}) #{#{[1 2 3] :a} #{[1 2 3] "abc"} #{[1 2 3] "efg"}
                                        #{:a "abc"} #{:a "efg"} #{"abc" "efg"}})
  )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/121
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given a mathematical formula in prefix notation, return a function that
+ ;; calculates the value of the formula. The formula can contain nested
+ ;; calculations using the four basic mathematical operators, numeric
+ ;; constants, and symbols representing variables. The returned function has
+ ;; to accept a single parameter containing the map of variable names to
+ ;; their values.
+ (= 2 ((__ '(/ a b))
+       '{b 8 a 16}))
+ (= 8 ((__ '(+ a b 2))
+       '{a 2 b 4}))
+ (= [6 0 -4]
+    (map (__ '(* (+ 2 a)
+                 (- 10 b)))
+         '[{a 1 b 8}
+           {b 5 a -2}
+           {a 2 b 11}]))
+ (= 1 ((__ '(/ (+ x 2)
+               (* 3 (+ y 1))))
+       '{x 4 y 1}))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/112
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Create a function which takes an integer and a nested collection of
+ ;; integers as arguments. Analyze the elements of the input collection and
+ ;; return a sequence which maintains the nested structure, and which
+ ;; includes all elements starting from the head whose sum is less than or
+ ;; equal to the input integer.
+ (=  (__ 10 [1 2 [3 [4 5] 6] 7])
+     '(1 2 (3 (4))))
+ (=  (__ 30 [1 2 [3 [4 [5 [6 [7 8]] 9]] 10] 11])
+     '(1 2 (3 (4 (5 (6 (7)))))))
+ (=  (__ 9 (range))
+     '(0 1 2 3))
+ (=  (__ 1 [[[[[1]]]]])
+     '(((((1))))))
+ (=  (__ 0 [1 2 [3 [4 5] 6] 7])
+     '())
+ (=  (__ 0 [0 0 [0 [0]]])
+     '(0 0 (0 (0))))
+ (=  (__ 1 [-10 [1 [2 3 [4 5 [6 7 [8]]]]]])
+     '(-10 (1 (2 3 (4)))))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/131
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given a variable number of sets of integers, create a function which
+ ;; returns true iff all of the sets have a non-empty subset with an
+ ;; equivalent summation.
+ (= true  (__ #{-1 1 99}
+              #{-2 2 888}
+              #{-3 3 7777})) ; ex. all sets have a subset which sums to zero
+ (= false (__ #{1}
+              #{2}
+              #{3}
+              #{4}))
+ (= true  (__ #{1}))
+ (= false (__ #{1 -3 51 9}
+              #{0}
+              #{9 2 81 33}))
+ (= true  (__ #{1 3 5}
+              #{9 11 4}
+              #{-3 12 3}
+              #{-3 4 -2 10}))
+ (= false (__ #{-1 -2 -3 -4 -5 -6}
+              #{1 2 3 4 5 6 7 8 9}))
+ (= true  (__ #{1 3 5 7}
+              #{2 4 6 8}))
+ (= true  (__ #{-1 3 -5 7 -9 11 -13 15}
+              #{1 -3 5 -7 9 -11 13 -15}
+              #{1 -1 2 -2 4 -4 8 -8}))
+ (= true  (__ #{-10 9 -8 7 -6 5 -4 3 -2 1}
+              #{10 -9 8 -7 6 -5 4 -3 2 -1}))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/144
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write an oscillating iterate: a function that takes an initial value and
+ ;; a variable number of functions. It should return a lazy sequence of the
+ ;; functions applied to the value in order, restarting from the first
+ ;; function after it hits the end.
+ (= (take 3 (__ 3.14 int double)) [3.14 3 3.0])
+ (= (take 5 (__ 3 #(- % 3) #(+ 5 %))) [3 0 5 2 7])
+ (= (take 12 (__ 0 inc dec inc dec inc)) [0 1 0 1 0 1 2 1 2 1 2 3])
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/141
+
+(def __
+  (fn [trump-suit]
+    (fn [cards] (reduce {(:suit (first cards)) 0} ; starting value is suit that was led, 0 face value
+                        (fn [best card]
+                          (cond (= trump-suit (:suit card)) {:suit trump-suit :rank (max (:rank card) (:rank best))}
+                                (= trump-suit (:suit best)) best
+                                (= (:suit card) (:suit (first cards))) {:suit (:suit card) :rank (max (:suit card (:suit best)))} ; ??
+                                :else (if (> (:rank card) (:rank best))
+                                        {:suit (:suit card) :rank (:rank card)}
+                                        best)))
+                        cards)))
+  )
+
+(and
+ ;; In trick-taking card games such as bridge, spades, or hearts, cards are
+ ;; played in groups known as "tricks" - each player plays a single card, in
+ ;; order; the first player is said to "lead" to the trick. After all
+ ;; players have played, one card is said to have "won" the trick. How the
+ ;; winner is determined will vary by game, but generally the winner is the
+ ;; highest card played in the suit that was led. Sometimes (again varying
+ ;; by game), a particular suit will be designated "trump", meaning that its
+ ;; cards are more powerful than any others: if there is a trump suit, and
+ ;; any trumps are played, then the highest trump wins regardless of what
+ ;; was led.
+ ;;
+ ;; Your goal is to devise a function that can determine which of a number
+ ;; of cards has won a trick. You should accept a trump suit, and return a
+ ;; function winner. Winner will be called on a sequence of cards, and
+ ;; should return the one which wins the trick. Cards will be represented in
+ ;; the format returned by Problem 128, Recognize Playing Cards: a hash-map
+ ;; of :suit and a numeric :rank. Cards with a larger rank are stronger.
+ (let [notrump (__ nil)]
+   (and (= {:suit :club :rank 9}  (notrump [{:suit :club :rank 4}
+                                            {:suit :club :rank 9}]))
+        (= {:suit :spade :rank 2} (notrump [{:suit :spade :rank 2}
+                                            {:suit :club :rank 10}]))))
+ (= {:suit :club :rank 10} ((__ :club) [{:suit :spade :rank 2}
+                                        {:suit :club :rank 10}]))
+ (= {:suit :heart :rank 8}
+    ((__ :heart) [{:suit :heart :rank 6} {:suit :heart :rank 8}
+                  {:suit :diamond :rank 10} {:suit :heart :rank 4}]))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/150
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; A palindromic number is a number that is the same when written forwards
+ ;; or backwards (e.g., 3, 99, 14341).
+ ;;
+ ;; Write a function which takes an integer n, as its only argument, and
+ ;; returns an increasing lazy sequence of all palindromic numbers that are
+ ;; not less than n.
+ ;; 
+ ;; The most simple solution will exceed the time limit!
+ (= (take 26 (__ 0))
+    [0 1 2 3 4 5 6 7 8 9
+     11 22 33 44 55 66 77 88 99
+     101 111 121 131 141 151 161])
+ (= (take 16 (__ 162))
+    [171 181 191 202
+     212 222 232 242
+     252 262 272 282
+     292 303 313 323])
+ (= (take 6 (__ 1234550000))
+    [1234554321 1234664321 1234774321
+     1234884321 1234994321 1235005321])
+ (= (first (__ (* 111111111 111111111)))
+    (* 111111111 111111111))
+ (= (set (take 199 (__ 0)))
+    (set (map #(first (__ %)) (range 0 10000))))
+ (= true
+    (apply < (take 6666 (__ 9999999))))
+ (= (nth (__ 0) 10101)
+    9102019)
+ )
+
+;;; ****************************************************************
+;;; Thus endeth the medium problems. Here begin-eth the hard ones.
+;;; ****************************************************************
