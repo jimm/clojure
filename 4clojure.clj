@@ -1001,6 +1001,27 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/144
+
+(def __
+  (fn [val & fs]
+    (let [fs (concat (list identity) (flatten (repeat fs)))]
+      (letfn [(f [val fs] (lazy-seq (let [new-val ((first fs) val)]
+                                      (cons new-val (f new-val (next fs))))))]
+        (f val fs))))
+  )
+
+(and
+ ;; Write an oscillating iterate: a function that takes an initial value and
+ ;; a variable number of functions. It should return a lazy sequence of the
+ ;; functions applied to the value in order, restarting from the first
+ ;; function after it hits the end.
+ (= (take 3 (__ 3.14 int double)) [3.14 3 3.0])
+ (= (take 5 (__ 3 #(- % 3) #(+ 5 %))) [3 0 5 2 7])
+ (= (take 12 (__ 0 inc dec inc dec inc)) [0 1 0 1 0 1 2 1 2 1 2 3])
+ )
+
+;;; ****************************************************************
 ;;; Solved, not yet submitted
 ;;; ****************************************************************
 
@@ -1174,7 +1195,8 @@
 ;;; http://www.4clojure.com/problem/112
 
 (def __
-  (fn [s]
+  (fn [n itree]
+    (map (tree-seq
     )
   )
 
@@ -1239,24 +1261,6 @@
  )
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/144
-
-(def __
-  (fn [s]
-    )
-  )
-
-(and
- ;; Write an oscillating iterate: a function that takes an initial value and
- ;; a variable number of functions. It should return a lazy sequence of the
- ;; functions applied to the value in order, restarting from the first
- ;; function after it hits the end.
- (= (take 3 (__ 3.14 int double)) [3.14 3 3.0])
- (= (take 5 (__ 3 #(- % 3) #(+ 5 %))) [3 0 5 2 7])
- (= (take 12 (__ 0 inc dec inc dec inc)) [0 1 0 1 0 1 2 1 2 1 2 3])
- )
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/141
 
 (def __
@@ -1306,8 +1310,18 @@
 ;;; http://www.4clojure.com/problem/150
 
 (def __
-  (fn [s]
-    )
+  (fn [n]
+    (letfn [(palindrome? [n] (= (str n) (apply str (reverse (str n)))))
+            (split-num [n] (let [s (str n)
+                                 len (count s)
+                                 half (/ len 2)]
+                             [(subs s 0 half)
+                              (if (even? len) "" (subs s half (inc half)))
+                              (subs s (if (odd? len) (inc half) half))]))]
+      (let [[beg mid end] (split-num n)
+            start-num (if (palindrome? n) n (Integer/parseInt (apply str (concat beg mid (reverse beg)))))]
+;; Nope. Turns 1222 into 1221.
+        (println "start-num =" start-num))))
   )
 
 (and
