@@ -24,11 +24,61 @@
  )
 
 ;;; ****************************************************************
+;;; How about code to load the problems? Here we go:
+;;; ****************************************************************
+
+(def unsolved-problems
+  [92 91 101 94 106 89 113 117 119 125 111 130 124 127 138 140])
+
+(def url-prefix "http://www.4clojure.com/problem/")
+
+(defn problem-url [n] (str url-prefix n))
+
+(defn match-groups
+  [html regex]
+  (let [pattern (java.util.regex.Pattern/compile regex java.util.regex.Pattern/DOTALL)
+        matcher (.matcher pattern html)]
+    (loop [f (re-find matcher)
+           matches []]
+      (if (nil? f)
+        matches
+        (recur (re-find matcher) (conj matches (second f)))))))
+
+(defn problem-parts
+  [html]
+  (let [desc (first (match-groups html "<div id=\"prob-desc\">(.*?)<table class=\"testcases\">"))
+        answer-table (first (match-groups html "<table class=\"testcases\">(.*?)</table"))
+        answers (match-groups answer-table "<pre class=\"brush[^>]+>(.*?)</pre>")]
+    [desc answers]))
+
+(defn read-unsolved-problem
+  [n]
+  (let [html (slurp (problem-url n))
+        [desc tests] (problem-parts html)]
+    (str ";;; ****************************************************************\n"
+         ";;; " (problem-url n) "\n"
+         "\n"
+         "(def __\n"
+         "  (fn [s]\n"
+         "    )\n"
+         "  )\n"
+         ""
+         "(and\n"
+         " ;; " (.replaceAll (.replaceAll desc "<br /><br />" "") "[\n\r]+" "\n ;;\n ;; ")
+         (apply str (interpose "\n " tests))
+         " )\n")))
+
+(defn read-unsolved-problems
+  "Read unsolved problems and print them in the format I use for solving them."
+  []
+  (map (comp println read-unsolved-problem) unsolved-problems))
+
+;;; ****************************************************************
 ;;; Solved
 ;;; ****************************************************************
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/82#prob-title
+;;; http://www.4clojure.com/problem/82
 (def __
   (fn [words]
     (letfn [(swap [coll i j]
@@ -1022,12 +1072,70 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/92
+
+(def __
+  (fn [s]
+    (let [vals {\M 1000, \D 500, \C 100, \L 50, \X 10, \V 5, \I 1}]
+      (loop [s (seq s)
+             prev-dig 0
+             digs []]
+        (cond (nil? s) (reduce + digs)
+              :else (let [dig (get vals (first s))]
+                      (recur (next s)
+                             dig
+                             (conj digs (cond (= dig prev-dig) dig
+                                                    (> dig prev-dig) (+ dig (- (* prev-dig 2)))
+                                                    (< dig prev-dig) dig))))))))
+  )
+
+(and
+ ;; Roman numerals are easy to recognize, but not everyone knows all the
+ ;; rules necessary to work with them. Write a function to parse a
+ ;; Roman-numeral string and return the number it represents.
+ ;;
+ ;; You can assume that the input will be well-formed, in upper-case, and
+ ;; follow the <a
+ ;; href="http://en.wikipedia.org/wiki/Roman_numerals#Subtractive_principle">subtractive
+ ;; principle</a>. You don't need to handle any numbers greater than
+ ;; MMMCMXCIX (3999), the largest number representable with ordinary
+ ;; letters.
+ (= 14 (__ "XIV"))
+ (= 827 (__ "DCCCXXVII"))
+ (= 3999 (__ "MMMCMXCIX"))
+ (= 48 (__ "XLVIII"))
+ )
+
+;;; ****************************************************************
 ;;; Solved, not yet submitted
 ;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; Unsolved
 ;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/125
+
+;;; Note: this passes the test but is rejected by the 4clojure site.
+
+(def __
+  (fn [] "__")
+  )
+
+(and
+ ;; Create a function of no arguments which returns a string that is an
+ ;; <i>exact</i> copy of the function itself.
+ ;;
+ ;; Hint: read <a
+ ;; href="http://en.wikipedia.org/wiki/Quine_(computing)">this</a> if you
+ ;; get stuck (this question is harder than it first appears); but it's
+ ;; worth the effort to solve it independently if you can!
+ ;;
+ ;; Fun fact: Gus is the name of the <a
+ ;; href="http://i.imgur.com/FBd8z.png">4Clojure dragon</a>.
+ (= (str '__) (__))
+)
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/108
@@ -1041,7 +1149,6 @@
 (defn find-min [coll] (apply min-key (comp min second)
                              (map-indexed #(list %1 (first %2)) coll)))
 
-
 (def __
   (fn [& seqs]
     (letfn [(remove-all-upto [minval seqs]
@@ -1049,13 +1156,13 @@
             (find-min [coll] (apply min-key (comp min second)
                                     (map-indexed #(list %1 (first %2)) coll)))]
       (loop [seqs seqs
-             minval nil]
+             minval (/ Integer/MAX_VALUE 2)]
         (if (nil? seqs)
           minval
           (let [[idx new-minval] (find-min seqs)
-                next-minval (if (or (nil? minval) (< new-minval minval)) new-minval minval)
+                next-minval (min new-minval minval)
                 new-seqs (remove-all-upto next-minval seqs)]
-            (if (or (nil? minval) (< new-minval minval))
+            (if (< new-minval minval)
               (recur (remove-all-upto next-minval seqs) next-minval)
               next-minval))))))
   )
@@ -1165,7 +1272,7 @@
 ;;; http://www.4clojure.com/problem/121
 
 (def __
-  (fn [s]
+  (fn [f]
     )
   )
 
@@ -1319,7 +1426,9 @@
                               (if (even? len) "" (subs s half (inc half)))
                               (subs s (if (odd? len) (inc half) half))]))]
       (let [[beg mid end] (split-num n)
-            start-num (if (palindrome? n) n (Integer/parseInt (apply str (concat beg mid (reverse beg)))))]
+            start-num (if (palindrome? n)
+                        n
+                        (Integer/parseInt (apply str (concat beg mid (reverse beg)))))]
 ;; Nope. Turns 1222 into 1221.
         (println "start-num =" start-num))))
   )
@@ -1358,3 +1467,722 @@
 ;;; ****************************************************************
 ;;; Thus endeth the medium problems. Here begin-eth the hard ones.
 ;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/91
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given a graph, determine whether the graph is connected. A connected
+ ;; graph is such that a path exists between any two given
+ ;; nodes.
+ ;;
+ ;; - Your function must return true if the graph is connected and false
+ ;; - otherwise.
+ ;;
+ ;; -You will be given a set of tuples representing the edges of a graph.
+ ;;  Each member of a tuple being a vertex/node in the graph.
+ ;;
+ ;; - Each edge is undirected (can be traversed either direction).
+ (= true (__ #{[:a :a]}))
+ (= true (__ #{[:a :b]}))
+ (= false (__ #{[1 2] [2 3] [3 1]
+               [4 5] [5 6] [6 4]}))
+ (= true (__ #{[1 2] [2 3] [3 1]
+              [4 5] [5 6] [6 4] [3 4]}))
+ (= false (__ #{[:a :b] [:b :c] [:c :d]
+               [:x :y] [:d :a] [:b :e]}))
+ (= true (__ #{[:a :b] [:b :c] [:c :d]
+              [:x :y] [:d :a] [:b :e] [:x :a]})) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/101
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given two sequences x and y, calculate the <a
+ ;; href="https://secure.wikimedia.org/wikipedia/en/wiki/Levenshtein_distance">Levenshtein
+ ;; distance</a> of x and y, i. e. the minimum number of edits needed to
+ ;; transform x into y. The allowed edits are:
+ ;;
+ ;; - insert a single item
+ ;; - delete a single item
+ ;; - replace a single item with another item
+ ;;
+ ;; WARNING: Some of the test cases may timeout if you write an inefficient
+ ;; solution!
+ (= (__ "kitten" "sitting") 3)
+ (= (__ "closure" "clojure") (__ "clojure" "closure") 1)
+ (= (__ "xyx" "xyyyx") 2)
+ (= (__ "" "123456") 6)
+ (= (__ "Clojure" "Clojure") (__ "" "") (__ [] []) 0)
+ (= (__ [1 2 3 4] [0 2 3 4 5]) 2)
+ (= (__ '(:a :b :c :d) '(:a :d)) 2)
+ (= (__ "ttttattttctg" "tcaaccctaccat") 10)
+ (= (__ "gaattctaatctc" "caaacaaaaaattt") 9) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/94
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; The <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life">game of
+ ;; life</a> is a cellular automaton devised by mathematician John Conway.
+ ;;
+ ;; The 'board' consists of both live (#) and dead ( ) cells. Each
+ ;; cell interacts with its eight neighbours (horizontal, vertical,
+ ;; diagonal), and its next state is dependent on the following
+ ;; rules:
+ ;;
+ ;; 1) Any live cell with fewer than two live neighbours dies, as if caused
+ ;; by under-population.
+ ;;
+ ;; 2) Any live cell with two or three live neighbours lives on to the next
+ ;; generation.
+ ;;
+ ;; 3) Any live cell with more than three live neighbours dies, as if by
+ ;; overcrowding.
+ ;;
+ ;; 4) Any dead cell with exactly three live neighbours becomes a live cell,
+ ;; as if by reproduction.
+ ;;
+ ;; Write a function that accepts a board, and returns a board representing
+ ;; the next generation of cells.
+ (= (__ ["      "
+        " ##   "
+        " ##   "
+        "   ## "
+        "   ## "
+        "      "])
+   ["      "  
+    " ##   "
+    " #    "
+    "    # "
+    "   ## "
+    "      "])
+ (= (__ ["     "
+        "     "
+        " ### "
+        "     "
+        "     "])
+   ["     "
+    "  #  "
+    "  #  "
+    "  #  "
+    "     "])
+ (= (__ ["      "
+        "      "
+        "  ### "
+        " ###  "
+        "      "
+        "      "])
+   ["      "
+    "   #  "
+    " #  # "
+    " #  # "
+    "  #   "
+    "      "]) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/106
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Given a pair of numbers, the start and end point, find a path between
+ ;; the two using only three possible operations:<ul>
+ ;;
+ ;; <li>double</li>
+ ;;
+ ;; <li>halve (odd numbers cannot be halved)</li>
+ ;;
+ ;; <li>add 2</li></ul>
+ ;;
+ ;; Find the shortest path through the "maze". Because there are multiple
+ ;; shortest paths, you must return the length of the shortest path, not the
+ ;; path itself.
+ (= 1 (__ 1 1))  ; 1
+ (= 3 (__ 3 12)) ; 3 6 12
+ (= 3 (__ 12 3)) ; 12 6 3
+ (= 3 (__ 5 9))  ; 5 7 9
+ (= 9 (__ 9 2))  ; 9 18 20 10 12 6 8 4 2
+ (= 5 (__ 9 12)) ; 9 11 22 24 12
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/89
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Starting with a graph you must write a function that returns true if it
+ ;; is possible to make a tour of the graph in which every edge is visited
+ ;; exactly once.<br/><br/>The graph is represented by a vector of tuples,
+ ;; where each tuple represents a single edge.<br/><br/>The rules
+ ;; are:<br/><br/>- You can start at any node.<br/>- You must visit each
+ ;; edge exactly once.</br>- All edges are undirected.
+ (= true (__ [[:a :b]]))
+ (= false (__ [[:a :a] [:b :b]]))
+ (= false (__ [[:a :b] [:a :b] [:a :c] [:c :a]
+               [:a :d] [:b :d] [:c :d]]))
+ (= true (__ [[1 2] [2 3] [3 4] [4 1]]))
+ (= true (__ [[:a :b] [:a :c] [:c :b] [:a :e]
+              [:b :e] [:a :d] [:b :d] [:c :e]
+              [:d :e] [:c :f] [:d :f]]))
+ (= false (__ [[1 2] [2 3] [2 4] [2 5]])) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/113
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write a function that takes a variable number of integer arguments. If
+ ;; the output is coerced into a string, it should return a comma (and
+ ;; space) separated list of the inputs sorted smallest to largest. If the
+ ;; output is coerced into a sequence, it should return a seq of unique
+ ;; input elements in the same order as they were entered.
+ (= "1, 2, 3" (str (__ 2 1 3)))
+ (= '(2 1 3) (seq (__ 2 1 3)))
+ (= '(2 1 3) (seq (__ 2 1 3 3 1 2)))
+ (= '(1) (seq (apply __ (repeat 5 1))))
+ (= "1, 1, 1, 1, 1" (str (apply __ (repeat 5 1))))
+ (and (= nil (seq (__)))
+     (=  "" (str (__)))) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/117
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; A mad scientist with tenure has created an experiment tracking mice in a
+ ;; maze. Several mazes have been randomly generated, and you've been tasked
+ ;; with writing a program to determine the mazes in which it's possible for
+ ;; the mouse to reach the cheesy endpoint. Write a function which accepts a
+ ;; maze in the form of a collection of rows, each row is a string where:
+ ;;
+ ;; <ul>
+ ;; <li>spaces represent areas where the mouse can walk freely</li>
+ ;; <li>hashes (#) represent walls where the mouse can not walk</li>
+ ;; <li>M represents the mouse's starting point</li>
+ ;; <li>C represents the cheese which the mouse must reach</li>
+ ;; </ul>
+ ;;
+ ;; The mouse is not allowed to travel diagonally in the maze (only
+ ;; up/down/left/right), nor can he escape the edge of the maze. Your
+ ;; function must return true iff the maze is solvable by the mouse.
+ (= true (__ ["M C"]))
+ (= false (__ ["M # C"]))
+ (= true  (__ ["#######"
+              "#     #"
+              "#  #  #"
+              "#M # C#"
+              "#######"]))
+ (= false (__ ["########"
+              "#M  #  #"
+              "#   #  #"
+              "# # #  #"
+              "#   #  #"
+              "#  #   #"
+              "#  # # #"
+              "#  #   #"
+              "#  #  C#"
+              "########"]))
+ (= false (__ ["M     "
+              "      "
+              "      "
+              "      "
+              "    ##"
+              "    #C"]))
+ (= true  (__ ["C######"
+              " #     "
+              " #   # "
+              " #   #M"
+              "     # "]))
+ (= true  (__ ["C# # # #"
+              "        "
+              "# # # # "
+              "        "
+              " # # # #"
+              "        "
+              "# # # #M"])) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/119
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; <p>As in <a href="/problem/73">Problem 73</a>, a tic-tac-toe board is
+ ;; represented by a two dimensional vector. X is represented by :x, O is
+ ;; represented by :o, and empty is represented by :e. Create a function
+ ;; that accepts a game piece and board as arguments, and returns a set
+ ;; (possibly empty) of all valid board placements of the game piece which
+ ;; would result in an immediate win.</p>
+ ;;
+ ;; <p>Board coordinates should be as in calls to <code>get-in</code>. For
+ ;; example, <code>[0 1]</code> is the topmost row, center position.</p><br
+ ;; />(= (__ :x [[:o :e :e]
+           [:o :x :o] 
+           [:x :x :e]])
+   #{[2 2] [0 1] [0 2]})
+ (= (__ :x [[:x :o :o] 
+           [:x :x :e] 
+           [:e :o :e]])
+   #{[2 2] [1 2] [2 0]})
+ (= (__ :x [[:x :e :x] 
+           [:o :x :o] 
+           [:e :o :e]])
+   #{[2 2] [0 1] [2 0]})
+ (= (__ :x [[:x :x :o] 
+           [:e :e :e] 
+           [:e :e :e]])
+   #{})
+ (= (__ :o [[:x :x :o] 
+           [:o :e :o] 
+           [:x :e :e]])
+   #{[2 2] [1 1]}) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/111
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Write a function that takes a string and a partially-filled crossword
+ ;; puzzle board, and determines if the input string can be legally placed
+ ;; onto the board.
+ ;;
+ ;; The crossword puzzle board consists of a collection of partially-filled
+ ;; rows. Empty spaces are denoted with an underscore (_), unusable spaces
+ ;; are denoted with a hash symbol (#), and pre-filled spaces have a
+ ;; character in place; the whitespace characters are for legibility and
+ ;; should be ignored.
+ ;;
+ ;; </br></br>
+ ;;
+ ;; For a word to be legally placed on the board:
+ ;;
+ ;; - It may use empty spaces (underscores)
+ ;;
+ ;; - It may use but must not conflict with any pre-filled characters.
+ ;;
+ ;; - It must not use any unusable spaces (hashes).
+ ;;
+ ;; - There must be no empty spaces (underscores) or extra characters before
+ ;; - or after the word (the word may be bound by unusable spaces though).
+ ;;
+ ;; - Characters are not case-sensitive. 
+ ;;
+ ;; - Words may be placed vertically (proceeding top-down only), or
+ ;; - horizontally (proceeding left-right only)
+ (= true  (__ "the" ["_ # _ _ e"]))
+ (= false (__ "the" ["c _ _ _"
+                    "d _ # e"
+                    "r y _ _"]))
+ (= true  (__ "joy" ["c _ _ _"
+                    "d _ # e"
+                    "r y _ _"]))
+ (= false (__ "joy" ["c o n j"
+                    "_ _ y _"
+                    "r _ _ #"]))
+ (= true  (__ "clojure" ["_ _ _ # j o y"
+                        "_ _ o _ _ _ _"
+                        "_ _ f _ # _ _"]))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/130
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Every node of a tree is connected to each of its children as
+ ;; well as its parent.  One can imagine grabbing one node of
+ ;; a tree and dragging it up to the root position, leaving all
+ ;; connections intact.  For example, below on the left is
+ ;; a binary tree.  By pulling the "c" node up to the root, we
+ ;; obtain the tree on the right.
+ ;;
+ ;; <img src="http://i.imgur.com/UtD2T.png">
+ ;;
+ ;; Note it is no longer binary as "c" had three connections
+ ;; total -- two children and one parent.
+ ;; Each node is represented as a vector, which always has at
+ ;; least one element giving the name of the node as a symbol.
+ ;; Subsequent items in the vector represent the children of the
+ ;; node.  Because the children are ordered it's important that
+ ;; the tree you return keeps the children of each node in order
+ ;; and that the old parent node, if any, is appended on the
+ ;; right.
+ ;;
+ ;; Your function will be given two args -- the name of the node
+ ;; that should become the new root, and the tree to transform.
+ (= '(n)
+   (__ 'n '(n)))
+ (= '(a (t (e)))
+   (__ 'a '(t (e) (a))))
+ (= '(e (t (a)))
+   (__ 'e '(a (t (e)))))
+ (= '(a (b (c)))
+   (__ 'a '(c (b (a)))))
+ (= '(d 
+      (b
+        (c)
+        (e)
+        (a 
+          (f 
+            (g) 
+            (h)))))
+  (__ 'd '(a
+            (b 
+              (c) 
+              (d) 
+              (e))
+            (f 
+              (g)
+              (h)))))
+ (= '(c 
+      (d) 
+      (e) 
+      (b
+        (f 
+          (g) 
+          (h))
+        (a
+          (i
+          (j
+            (k)
+            (l))
+          (m
+            (n)
+            (o))))))
+   (__ 'c '(a
+             (b
+               (c
+                 (d)
+                 (e))
+               (f
+                 (g)
+                 (h)))
+             (i
+               (j
+                 (k)
+                 (l))
+               (m
+                 (n)
+                 (o))))))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/124
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; <p><a href="http://en.wikipedia.org/wiki/Reversi">Reversi</a> is
+ ;; normally played on an 8 by 8 board. In this problem, a 4 by 4 board is
+ ;; represented as a two-dimensional vector with black, white, and empty
+ ;; pieces represented by 'b, 'w, and 'e, respectively. Create a function
+ ;; that accepts a game board and color as arguments, and returns a map of
+ ;; legal moves for that color. Each key should be the coordinates of a
+ ;; legal move, and its value a set of the coordinates of the pieces flipped
+ ;; by that move.</p>
+ ;;
+ ;; <p>Board coordinates should be as in calls to get-in. For example,
+ ;; <code>[0 1]</code> is the topmost row, second column from the
+ ;; left.</p>
+  (= {[1 3] #{[1 2]}, [0 2] #{[1 2]}, [3 1] #{[2 1]}, [2 0] #{[2 1]}}
+   (__ '[[e e e e]
+         [e w b e]
+         [e b w e]
+         [e e e e]] 'w))
+ (= {[3 2] #{[2 2]}, [3 0] #{[2 1]}, [1 0] #{[1 1]}}
+   (__ '[[e e e e]
+         [e w b e]
+         [w w w e]
+         [e e e e]] 'b))
+ (= {[0 3] #{[1 2]}, [1 3] #{[1 2]}, [3 3] #{[2 2]}, [2 3] #{[2 2]}}
+   (__ '[[e e e e]
+         [e w b e]
+         [w w b e]
+         [e e b e]] 'w))
+ (= {[0 3] #{[2 1] [1 2]}, [1 3] #{[1 2]}, [2 3] #{[2 1] [2 2]}}
+   (__ '[[e e w e]
+         [b b w e]
+         [b w w e]
+         [b w w w]] 'b))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/127
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Everyone loves triangles, and it's easy to understand why&mdash;they're
+ ;; so wonderfully symmetric (except scalenes, they suck).
+ ;;
+ ;; Your passion for triangles has led you to become a miner (and part-time
+ ;; Clojure programmer) where you work all day to chip out isosceles-shaped
+ ;; minerals from rocks gathered in a nearby open-pit mine. There are too
+ ;; many rocks coming from the mine to harvest them all so you've been
+ ;; tasked with writing a program to analyze the mineral patterns of each
+ ;; rock, and determine which rocks have the biggest minerals.
+ ;;
+ ;; Someone has already written a <a
+ ;; href="http://en.wikipedia.org/wiki/Computer_vision">computer-vision</a>
+ ;; system for the mine. It images each rock as it comes into the processing
+ ;; centre and creates a cross-sectional <a
+ ;; href="http://en.wikipedia.org/wiki/Bit_array">bitmap</a> of mineral (1)
+ ;; and rock (0) concentrations for each one.
+ ;;
+ ;; You must now create a function which accepts a collection of integers,
+ ;; each integer when read in base-2 gives the bit-representation of the
+ ;; rock (again, 1s are mineral and 0s are worthless scalene-like rock). You
+ ;; must return the cross-sectional area of the largest harvestable mineral
+ ;; from the input rock, as follows:
+ ;;
+ ;; <br>
+ ;;
+ ;; <ul>
+ ;;
+ ;; <li>The minerals only have smooth faces when sheared vertically or
+ ;; horizontally from the rock's cross-section</li>
+ ;;
+ ;; <li>The mine is only concerned with harvesting isosceles triangles (such
+ ;; that one or two sides can be sheared)</li>
+ ;;
+ ;; <li>If only one face of the mineral is sheared, its opposing vertex must
+ ;; be a point (ie. the smooth face must be of odd length), and its two
+ ;; equal-length sides must intersect the shear face at 45&deg; (ie. those
+ ;; sides must cut even-diagonally)</li>
+ ;;
+ ;; <li>The harvested mineral may not contain any traces of rock</li>
+ ;;
+ ;; <li>The mineral may lie in any orientation in the plane</li>
+ ;;
+ ;; <li>Area should be calculated as the sum of 1s that comprise the mineral</li>
+ ;;
+ ;; <li>Minerals must have a minimum of three measures of area to be harvested</li>
+ ;;
+ ;; <li>If no minerals can be harvested from the rock, your function should return nil</li>
+ ;;
+ ;; </ul>
+(= 10 (__ [15 15 15 15 15]))
+; 1111      1111
+; 1111      *111
+; 1111  ->  **11
+; 1111      ***1
+; 1111      ****
+ (= 15 (__ [1 3 7 15 31]))
+; 00001      0000*
+; 00011      000**
+; 00111  ->  00***
+; 01111      0****
+; 11111      *****
+ (= 3 (__ [3 3]))
+; 11      *1
+; 11  ->  **
+ (= 4 (__ [7 3]))
+; 111      ***
+; 011  ->  0*1
+ (= 6 (__ [17 22 6 14 22]))
+; 10001      10001
+; 10110      101*0
+; 00110  ->  00**0
+; 01110      0***0
+; 10110      10110
+ (= 9 (__ [18 7 14 14 6 3]))
+; 10010      10010
+; 00111      001*0
+; 01110      01**0
+; 01110  ->  0***0
+; 00110      00**0
+; 00011      000*1
+ (= nil (__ [21 10 21 10]))
+; 10101      10101
+; 01010      01010
+; 10101  ->  10101
+; 01010      01010
+ (= nil (__ [0 31 0 31 0]))
+; 00000      00000
+; 11111      11111
+; 00000  ->  00000
+; 11111      11111
+; 00000      00000 )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/138
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Create a function of two integer arguments: the start and end,
+ ;; respectively. You must create a vector of strings which renders a
+ ;; 45&deg; rotated square of integers which are successive squares from the
+ ;; start point up to and including the end point. If a number comprises
+ ;; multiple digits, wrap them around the shape individually. If there are
+ ;; not enough digits to complete the shape, fill in the rest with asterisk
+ ;; characters. The direction of the drawing should be clockwise, starting
+ ;; from the center of the shape and working outwards, with the initial
+ ;; direction being down and to the right.
+ (= (__ 2 2) ["2"])
+ (= (__ 2 4) [" 2 "
+             "* 4"
+             " * "])
+ (= (__ 3 81) [" 3 "
+              "1 9"
+              " 8 "])
+ (= (__ 4 20) [" 4 "
+              "* 1"
+              " 6 "])
+ (= (__ 2 256) ["  6  "
+               " 5 * "
+               "2 2 *"
+               " 6 4 "
+               "  1  "])
+ (= (__ 10 10000) ["   0   "
+                  "  1 0  "
+                  " 0 1 0 "
+                  "* 0 0 0"
+                  " * 1 * "
+                  "  * *  "
+                  "   *   "]) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/140
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ ;; Create a function which accepts as input a boolean algebra function in
+ ;; the form of a set of sets, where the inner sets are collections of
+ ;; symbols corresponding to the input boolean variables which satisfy the
+ ;; function (the inputs of the inner sets are conjoint, and the sets
+ ;; themselves are disjoint... also known as canonical minterms).
+ ;; Note:&nbsp;capitalized symbols represent truth, and lower-case symbols
+ ;; represent negation of the inputs. Your function must return the minimal
+ ;; function which is logically equivalent to the input.
+ ;;
+ ;; PS &mdash; You may want to give this a read before proceeding: <a
+ ;; href="http://en.wikipedia.org/wiki/K_map">K-Maps</a>
+ ;;
+ ;; PPS &mdash; If you're interested in logic programming more generally,
+ ;; you should also check out: <a
+ ;; href="https://github.com/clojure/core.logic">core.logic</a>
+ (= (__ #{#{'a 'B 'C 'd}
+         #{'A 'b 'c 'd}
+         #{'A 'b 'c 'D}
+         #{'A 'b 'C 'd}
+         #{'A 'b 'C 'D}
+         #{'A 'B 'c 'd}
+         #{'A 'B 'c 'D}
+         #{'A 'B 'C 'd}})
+   #{#{'A 'c} 
+     #{'A 'b}
+     #{'B 'C 'd}})
+ (= (__ #{#{'A 'B 'C 'D}
+         #{'A 'B 'C 'd}})
+   #{#{'A 'B 'C}})
+ (= (__ #{#{'a 'b 'c 'd}
+         #{'a 'B 'c 'd}
+         #{'a 'b 'c 'D}
+         #{'a 'B 'c 'D}
+         #{'A 'B 'C 'd}
+         #{'A 'B 'C 'D}
+         #{'A 'b 'C 'd}
+         #{'A 'b 'C 'D}})
+   #{#{'a 'c}
+     #{'A 'C}})
+ (= (__ #{#{'a 'b 'c} 
+         #{'a 'B 'c}
+         #{'a 'b 'C}
+         #{'a 'B 'C}})
+   #{#{'a}})
+ (= (__ #{#{'a 'B 'c 'd}
+         #{'A 'B 'c 'D}
+         #{'A 'b 'C 'D}
+         #{'a 'b 'c 'D}
+         #{'a 'B 'C 'D}
+         #{'A 'B 'C 'd}})
+   #{#{'a 'B 'c 'd}
+     #{'A 'B 'c 'D}
+     #{'A 'b 'C 'D}
+     #{'a 'b 'c 'D}
+     #{'a 'B 'C 'D}
+     #{'A 'B 'C 'd}})
+ (= (__ #{#{'a 'b 'c 'd}
+         #{'a 'B 'c 'd}
+         #{'A 'B 'c 'd}
+         #{'a 'b 'c 'D}
+         #{'a 'B 'c 'D}
+         #{'A 'B 'c 'D}})
+   #{#{'a 'c}
+     #{'B 'c}})
+ (= (__ #{#{'a 'B 'c 'd}
+         #{'A 'B 'c 'd}
+         #{'a 'b 'c 'D}
+         #{'a 'b 'C 'D}
+         #{'A 'b 'c 'D}
+         #{'A 'b 'C 'D}
+         #{'a 'B 'C 'd}
+         #{'A 'B 'C 'd}})
+   #{#{'B 'd}
+     #{'b 'D}})
+ (= (__ #{#{'a 'b 'c 'd}
+         #{'A 'b 'c 'd}
+         #{'a 'B 'c 'D}
+         #{'A 'B 'c 'D}
+         #{'a 'B 'C 'D}
+         #{'A 'B 'C 'D}
+         #{'a 'b 'C 'd}
+         #{'A 'b 'C 'd}})
+   #{#{'B 'D}
+     #{'b 'd}}) )
