@@ -62,7 +62,7 @@
          "  (fn [s]\n"
          "    )\n"
          "  )\n"
-         ""
+         "\n"
          "(and\n"
          " ;; " (.replaceAll (.replaceAll desc "<br /><br />" "") "[\n\r]+" "\n ;;\n ;; ")
          (apply str (interpose "\n " tests))
@@ -1107,64 +1107,26 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/125
-
-;;; Note: this passes the test but is rejected by the 4clojure site.
-
-(def __
-  (fn [] "__")
-  )
-
-(and
- ;; Create a function of no arguments which returns a string that is an
- ;; <i>exact</i> copy of the function itself.
- ;;
- ;; Hint: read <a
- ;; href="http://en.wikipedia.org/wiki/Quine_(computing)">this</a> if you
- ;; get stuck (this question is harder than it first appears); but it's
- ;; worth the effort to solve it independently if you can!
- ;;
- ;; Fun fact: Gus is the name of the <a
- ;; href="http://i.imgur.com/FBd8z.png">4Clojure dragon</a>.
- (= (str '__) (__))
-)
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/108
 
-;; Wrong. This finds the min value from all sequences, not the min that
-;; appears in all sequences.
-
-;; DEBUG
-(defn remove-all-upto [minval seqs]
-  (apply map (list (partial drop-while #(< % minval)) seqs)))
-(defn find-min [coll] (apply min-key (comp min second)
-                             (map-indexed #(list %1 (first %2)) coll)))
+;; loop
+;; - find min value in all sequences
+;; - if all other seqs have same value at front, done
+;; - else they are all higher, so strip min value from min value sequence
 
 (def __
   (fn [& seqs]
-    (letfn [(remove-all-upto [minval seqs]
-              (apply map (list (partial drop-while #(< % minval)) seqs)))
-            (find-min [coll] (apply min-key (comp min second)
-                                    (map-indexed #(list %1 (first %2)) coll)))]
-      (loop [seqs seqs
-             minval (/ Integer/MAX_VALUE 2)]
-        (if (nil? seqs)
-          minval
-          (let [[idx new-minval] (find-min seqs)
-                next-minval (min new-minval minval)
-                new-seqs (remove-all-upto next-minval seqs)]
-            (if (< new-minval minval)
-              (recur (remove-all-upto next-minval seqs) next-minval)
-              next-minval))))))
+    (letfn [(all-equal-at-front [seqs] (apply = (map first seqs)))
+            (find-min [coll] ; return index of seq with min value, along with min value
+              (apply min-key (comp min second)
+                     (map-indexed #(list %1 (first %2)) coll)))
+            (remove-first-from-nth-seq [seqs idx]
+              (map-indexed #(if (= %1 idx) (next %2) %2) seqs))]
+      (loop [seqs seqs]
+        (if (all-equal-at-front seqs)
+          (first (first seqs))
+          (let [[idx _] (find-min seqs)]
+            (recur (remove-first-from-nth-seq seqs idx)))))))
   )
 
 (and
@@ -1182,23 +1144,17 @@
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/132
 
-;; TODO hanging on last test because __ is not lazy
-
 (def __
-  (fn [pred val coll]
-    (flatten (loop [coll coll
-                    prev-item nil
-                    answer []]
-               ;; (println "coll" coll "prev-item" prev-item "answer" answer) ; DEBUG
-               (if (or (empty? coll) (nil? coll))
-                 answer
-                 (let [item (first coll)
-                       item-pred-val (if (nil? prev-item) false (pred prev-item item))]
-                   ;; (println "item" item "item-pred-val" item-pred-val) ; DEBUG
-                   (recur (next coll) item (conj answer
-                                                 (if item-pred-val
-                                                   [val item]
-                                                   item))))))))
+  (fn [pred interject-me coll]
+    (letfn [(lazy-seq-interject [f prev-val coll]
+              (if (empty? coll) nil
+                  (let [next-val (first coll)]
+                    (lazy-seq (if (and f (f prev-val next-val))
+                                (cons interject-me (lazy-seq-interject nil prev-val coll))
+                                (cons next-val (lazy-seq-interject pred next-val (next coll))))))))]
+      (if (empty? coll) ()
+          (concat (list (first coll))
+                  (lazy-seq-interject pred (first coll) (next coll))))))
   )
 
 (and
@@ -1250,7 +1206,7 @@
                             (= n cnt) (list (seq items))
                             :else
                             (map #(map v-items %) (index-combinations n cnt)))))))]
-      (combinations coll n)))
+      (into #{} (map #(into #{} %) (combinations coll n)))))
   )
 
 (and
@@ -1269,12 +1225,51 @@
  )
 
 ;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/125
+
+;; This is a solution, but it's not mine.
+(fn []
+ (let [a ["(fn [] (let [a "
+          "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
+
+
+;; Note: this test won't work in the REPL. You need to literally substitute
+;; the text of the function's definition for each "__".
+(and
+ ;; Create a function of no arguments which returns a string that is an
+ ;; exact copy of the function itself.
+ ;;
+ ;; Hint: read up on Quines if you get stuck (this question is harder than
+ ;; it first appears); but it's worth the effort to solve it independently
+ ;; if you can!
+ ;;
+ (= (str '__) (__))
+)
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/121
 
 (def __
-  (fn [f]
-    )
+  (fn [formula]
+    (fn [bindings]
+      (with-bindings* bindings (eval formula))))
   )
+
+; DEBUG nope
+(with-bindings '{b 8 a 6} (+ b a))
+
+; DEBUG nope
+(do
+  (map #(def (symbol (key %)) (val %)) '{b 8 a 6})
+  (+ b a))
 
 (and
  ;; Given a mathematical formula in prefix notation, return a function that
