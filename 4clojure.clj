@@ -1225,111 +1225,60 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/125
-
-;; This is a solution, but it's not mine.
-(fn []
- (let [a ["(fn [] (let [a "
-          "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
-
-
-;; Note: this test won't work in the REPL. You need to literally substitute
-;; the text of the function's definition for each "__".
-(and
- ;; Create a function of no arguments which returns a string that is an
- ;; exact copy of the function itself.
- ;;
- ;; Hint: read up on Quines if you get stuck (this question is harder than
- ;; it first appears); but it's worth the effort to solve it independently
- ;; if you can!
- ;;
- (= (str '__) (__))
-)
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/121
-
-(def __
-  (fn [formula]
-    (fn [bindings]
-      (with-bindings* bindings (eval formula))))
-  )
-
-; DEBUG nope
-(with-bindings '{b 8 a 6} (+ b a))
-
-; DEBUG nope
-(do
-  (map #(def (symbol (key %)) (val %)) '{b 8 a 6})
-  (+ b a))
-
-(and
- ;; Given a mathematical formula in prefix notation, return a function that
- ;; calculates the value of the formula. The formula can contain nested
- ;; calculations using the four basic mathematical operators, numeric
- ;; constants, and symbols representing variables. The returned function has
- ;; to accept a single parameter containing the map of variable names to
- ;; their values.
- (= 2 ((__ '(/ a b))
-       '{b 8 a 16}))
- (= 8 ((__ '(+ a b 2))
-       '{a 2 b 4}))
- (= [6 0 -4]
-    (map (__ '(* (+ 2 a)
-                 (- 10 b)))
-         '[{a 1 b 8}
-           {b 5 a -2}
-           {a 2 b 11}]))
- (= 1 ((__ '(/ (+ x 2)
-               (* 3 (+ y 1))))
-       '{x 4 y 1}))
- )
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/112
-
-(def __
-  (fn [n itree]
-    (map (tree-seq
-    )
-  )
-
-(and
- ;; Create a function which takes an integer and a nested collection of
- ;; integers as arguments. Analyze the elements of the input collection and
- ;; return a sequence which maintains the nested structure, and which
- ;; includes all elements starting from the head whose sum is less than or
- ;; equal to the input integer.
- (=  (__ 10 [1 2 [3 [4 5] 6] 7])
-     '(1 2 (3 (4))))
- (=  (__ 30 [1 2 [3 [4 [5 [6 [7 8]] 9]] 10] 11])
-     '(1 2 (3 (4 (5 (6 (7)))))))
- (=  (__ 9 (range))
-     '(0 1 2 3))
- (=  (__ 1 [[[[[1]]]]])
-     '(((((1))))))
- (=  (__ 0 [1 2 [3 [4 5] 6] 7])
-     '())
- (=  (__ 0 [0 0 [0 [0]]])
-     '(0 0 (0 (0))))
- (=  (__ 1 [-10 [1 [2 3 [4 5 [6 7 [8]]]]]])
-     '(-10 (1 (2 3 (4)))))
- )
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/131
 
 (def __
-  (fn [s]
-    )
+  (fn [& sets]
+    (letfn [;; Borrowing from clojure.contrib.combinatorics
+            (index-combinations [n cnt]
+              (lazy-seq
+               (let [c (vec (cons nil (for [j (range 1 (inc n))] (+ j cnt (- (inc n)))))),
+                     iter-comb
+                     (fn iter-comb [c j]
+                       (if (> j n) nil
+                           (let [c (assoc c j (dec (c j)))]
+                             (if (< (c j) j) [c (inc j)]
+                                 (loop [c c, j j]
+                                   (if (= j 1) [c j]
+                                       (recur (assoc c (dec j) (dec (c j))) (dec j)))))))),
+                     step
+                     (fn step [c j]
+                       (cons (rseq (subvec c 1 (inc n)))
+                             (lazy-seq (let [next-step (iter-comb c j)]
+                                         (when next-step (step (next-step 0) (next-step 1)))))))]
+                 (step c 1))))
+            (combinations [items n]      
+              (let [v-items (vec (reverse items))]
+                (if (zero? n) (list ())
+                    (let [cnt (count items)]
+                      (cond (> n cnt) nil
+                            (= n cnt) (list (seq items))
+                            :else
+                            (map #(map v-items %) (index-combinations n cnt)))))))
+            (subsets [items]
+              (mapcat (fn [n] (combinations items n))
+                      (range (inc (count items)))))
+            ;; Borrowing from clojure.set
+            (bubble-max-key [k coll]
+              (let [max (apply max-key k coll)]
+                (cons max (remove #(identical? max %) coll))))
+            (intersection
+              ([s1] s1)
+              ([s1 s2]
+                 (if (< (count s2) (count s1))
+                   (recur s2 s1)
+                   (reduce (fn [result item]
+                             (if (contains? s2 item)
+                               result
+                               (disj result item)))
+                           s1 s1)))
+              ([s1 s2 & sets] 
+                 (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
+                   (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
+            ;; Now for some functions of our own
+            (sums [s] (map #(apply + %) (filter not-empty (subsets s))))]
+      (not (empty? (apply intersection
+                          (map #(into #{} (sums %)) sets))))))
   )
 
 (and
@@ -1360,6 +1309,132 @@
               #{1 -1 2 -2 4 -4 8 -8}))
  (= true  (__ #{-10 9 -8 7 -6 5 -4 3 -2 1}
               #{10 -9 8 -7 6 -5 4 -3 2 -1}))
+ )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/121
+
+;; Can't use eval
+
+(def __
+  (fn [formula]
+    ;; Let's copy clojure.walk code and use that
+    (letfn [(walk [inner outer form]
+                (cond
+                 (list? form) (outer (apply list (map inner form)))
+                 (seq? form) (outer (doall (map inner form)))
+                 (vector? form) (outer (vec (map inner form)))
+                 (map? form) (outer (into (if (sorted? form) (sorted-map) {})
+                                          (map inner form)))
+                 (set? form) (outer (into (if (sorted? form) (sorted-set) #{})
+                                          (map inner form)))
+                 :else (outer form)))
+            (prewalk [f form]
+              (walk (partial prewalk f) identity (f form)))
+            (prewalk-replace [smap form]
+              (prewalk (fn [x] (if (contains? smap x) (smap x) x)) form))]
+      ;; The function we're returning
+      (fn [bindings]
+        (eval (prewalk-replace bindings formula)))))
+  )
+
+(and
+ ;; Given a mathematical formula in prefix notation, return a function that
+ ;; calculates the value of the formula. The formula can contain nested
+ ;; calculations using the four basic mathematical operators, numeric
+ ;; constants, and symbols representing variables. The returned function has
+ ;; to accept a single parameter containing the map of variable names to
+ ;; their values.
+ (= 2 ((__ '(/ a b))
+       '{b 8 a 16}))
+ (= 8 ((__ '(+ a b 2))
+       '{a 2 b 4}))
+ (= [6 0 -4]
+    (map (__ '(* (+ 2 a)
+                 (- 10 b)))
+         '[{a 1 b 8}
+           {b 5 a -2}
+           {a 2 b 11}]))
+ (= 1 ((__ '(/ (+ x 2)
+               (* 3 (+ y 1))))
+       '{x 4 y 1}))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/125
+
+;; This is a solution, but it's not mine.
+(fn []
+ (let [a ["(fn [] (let [a "
+          "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
+
+
+;; Note: this test won't work in the REPL. You need to literally substitute
+;; the text of the function's definition for each "__".
+(and
+ ;; Create a function of no arguments which returns a string that is an
+ ;; exact copy of the function itself.
+ ;;
+ ;; Hint: read up on Quines if you get stuck (this question is harder than
+ ;; it first appears); but it's worth the effort to solve it independently
+ ;; if you can!
+ ;;
+ (= (str '__) (__))
+)
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/112
+
+;; infinite loop?
+
+(def __
+  (fn [n itree]
+    (letfn [(remove-last-leaf-node [tree]
+              (println "remove-last-leaf-node tree" tree) ; DEBUG
+              (let [all-but-last-node (butlast tree)
+                    last-node (last tree)]
+                (println "tree" tree "all-but-last-node" all-but-last-node "last-node" last-node) ; DEBUG
+                (if (coll? last-node)
+                  (do
+                    (println "about to call assoc which will return " (assoc tree (dec (count tree)) (remove-last-leaf-node last-node)))
+                    (assoc (into [] tree) (dec (count tree)) (remove-last-leaf-node last-node))
+                    )
+                  (into [] all-but-last-node))))]
+      (loop [itree itree]
+        (println "looping; itree" itree) ; DEBUG
+        (if (<= (apply + (flatten itree)) n)
+          itree
+          (recur (remove-last-leaf-node itree))))))
+  )
+
+(and
+ ;; Create a function which takes an integer and a nested collection of
+ ;; integers as arguments. Analyze the elements of the input collection and
+ ;; return a sequence which maintains the nested structure, and which
+ ;; includes all elements starting from the head whose sum is less than or
+ ;; equal to the input integer.
+ (=  (__ 10 [1 2 [3 [4 5] 6] 7])
+     '(1 2 (3 (4))))
+ (=  (__ 30 [1 2 [3 [4 [5 [6 [7 8]] 9]] 10] 11])
+     '(1 2 (3 (4 (5 (6 (7)))))))
+ (=  (__ 9 (range))
+     '(0 1 2 3))
+ (=  (__ 1 [[[[[1]]]]])
+     '(((((1))))))
+ (=  (__ 0 [1 2 [3 [4 5] 6] 7])
+     '())
+ (=  (__ 0 [0 0 [0 [0]]])
+     '(0 0 (0 (0))))
+ (=  (__ 1 [-10 [1 [2 3 [4 5 [6 7 [8]]]]]])
+     '(-10 (1 (2 3 (4)))))
  )
 
 ;;; ****************************************************************
