@@ -1312,38 +1312,21 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/121
-
-;; Can't use eval
 
 (def __
   (fn [formula]
-    ;; Let's copy clojure.walk code and use that
-    (letfn [(walk [inner outer form]
-                (cond
-                 (list? form) (outer (apply list (map inner form)))
-                 (seq? form) (outer (doall (map inner form)))
-                 (vector? form) (outer (vec (map inner form)))
-                 (map? form) (outer (into (if (sorted? form) (sorted-map) {})
-                                          (map inner form)))
-                 (set? form) (outer (into (if (sorted? form) (sorted-set) #{})
-                                          (map inner form)))
-                 :else (outer form)))
-            (prewalk [f form]
-              (walk (partial prewalk f) identity (f form)))
-            (prewalk-replace [smap form]
-              (prewalk (fn [x] (if (contains? smap x) (smap x) x)) form))]
-      ;; The function we're returning
-      (fn [bindings]
-        (eval (prewalk-replace bindings formula)))))
+    (fn [bindings]
+      (letfn [(f [expr]
+                (cond (coll? expr) (let [sym (first expr)
+                                         args (next expr)]
+                                     (cond (= sym '+) (apply + (map f args))
+                                           (= sym '-) (apply - (map f args))
+                                           (= sym '*) (apply * (map f args))
+                                           (= sym '/) (apply / (map f args))))
+                      (get bindings expr) (get bindings expr)
+                      :else (int expr)))]
+        (f formula))))
   )
 
 (and
@@ -1367,6 +1350,14 @@
                (* 3 (+ y 1))))
        '{x 4 y 1}))
  )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/125
@@ -1393,26 +1384,22 @@
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/112
 
-;; infinite loop?
+;; infinite loop because not lazy
+;; need to take from front, not from back
 
 (def __
   (fn [n itree]
-    (letfn [(remove-last-leaf-node [tree]
-              (println "remove-last-leaf-node tree" tree) ; DEBUG
+    (letfn [(take-flat [n tree]
               (let [all-but-last-node (butlast tree)
                     last-node (last tree)]
-                (println "tree" tree "all-but-last-node" all-but-last-node "last-node" last-node) ; DEBUG
                 (if (coll? last-node)
-                  (do
-                    (println "about to call assoc which will return " (assoc tree (dec (count tree)) (remove-last-leaf-node last-node)))
-                    (assoc (into [] tree) (dec (count tree)) (remove-last-leaf-node last-node))
-                    )
+                  (assoc (into [] tree) (dec (count tree)) (remove-last-leaf-node last-node))
                   (into [] all-but-last-node))))]
-      (loop [itree itree]
-        (println "looping; itree" itree) ; DEBUG
-        (if (<= (apply + (flatten itree)) n)
-          itree
-          (recur (remove-last-leaf-node itree))))))
+      (lazy-seq
+       (loop [itree itree]
+         (if (<= (apply + (flatten itree)) n)
+           itree
+           (recur (remove-last-leaf-node itree)))))))
   )
 
 (and
@@ -1705,10 +1692,15 @@
 (and
  ;; Starting with a graph you must write a function that returns true if it
  ;; is possible to make a tour of the graph in which every edge is visited
- ;; exactly once.<br/><br/>The graph is represented by a vector of tuples,
- ;; where each tuple represents a single edge.<br/><br/>The rules
- ;; are:<br/><br/>- You can start at any node.<br/>- You must visit each
- ;; edge exactly once.</br>- All edges are undirected.
+ ;; exactly once.
+ ;;
+ ;; The graph is represented by a vector of tuples, where each tuple
+ ;; represents a single edge.
+ ;;
+ ;; The rules are:
+ ;; - You can start at any node.
+ ;; - You must visit each edge exactly once.
+ ;; - All edges are undirected.
  (= true (__ [[:a :b]]))
  (= false (__ [[:a :a] [:b :b]]))
  (= false (__ [[:a :b] [:a :b] [:a :c] [:c :a]
@@ -1723,8 +1715,14 @@
 ;;; http://www.4clojure.com/problem/113
 
 (def __
-  (fn [s]
-    )
+  (fn [& is]
+    (loop [is is
+           seen #{}
+           answer []]
+      (let [i (first is)]
+        (cond (empty? is) answer
+              (some #{i} seen) (recur (next is) seen answer)
+              :else (recur (next is) (conj seen i) (conj answer i))))))
   )
 
 (and
@@ -1756,12 +1754,10 @@
  ;; the mouse to reach the cheesy endpoint. Write a function which accepts a
  ;; maze in the form of a collection of rows, each row is a string where:
  ;;
- ;; <ul>
- ;; <li>spaces represent areas where the mouse can walk freely</li>
- ;; <li>hashes (#) represent walls where the mouse can not walk</li>
- ;; <li>M represents the mouse's starting point</li>
- ;; <li>C represents the cheese which the mouse must reach</li>
- ;; </ul>
+ ;; - spaces represent areas where the mouse can walk freely
+ ;; - hashes (#) represent walls where the mouse can not walk
+ ;; - M represents the mouse's starting point
+ ;; - C represents the cheese which the mouse must reach
  ;;
  ;; The mouse is not allowed to travel diagonally in the maze (only
  ;; up/down/left/right), nor can he escape the edge of the maze. Your
@@ -1896,7 +1892,7 @@
 ;;; http://www.4clojure.com/problem/130
 
 (def __
-  (fn [s]
+  (fn [new-root tree]
     )
   )
 
@@ -1987,18 +1983,17 @@
   )
 
 (and
- ;; <p><a href="http://en.wikipedia.org/wiki/Reversi">Reversi</a> is
- ;; normally played on an 8 by 8 board. In this problem, a 4 by 4 board is
+ ;; <a href="http://en.wikipedia.org/wiki/Reversi">Reversi</a> is normally
+ ;; played on an 8 by 8 board. In this problem, a 4 by 4 board is
  ;; represented as a two-dimensional vector with black, white, and empty
  ;; pieces represented by 'b, 'w, and 'e, respectively. Create a function
  ;; that accepts a game board and color as arguments, and returns a map of
  ;; legal moves for that color. Each key should be the coordinates of a
  ;; legal move, and its value a set of the coordinates of the pieces flipped
- ;; by that move.</p>
+ ;; by that move.
  ;;
- ;; <p>Board coordinates should be as in calls to get-in. For example,
- ;; <code>[0 1]</code> is the topmost row, second column from the
- ;; left.</p>
+ ;; Board coordinates should be as in calls to get-in. For example, [0 1] is
+ ;; the topmost row, second column from the left.
   (= {[1 3] #{[1 2]}, [0 2] #{[1 2]}, [3 1] #{[2 1]}, [2 0] #{[2 1]}}
    (__ '[[e e e e]
          [e w b e]
@@ -2030,8 +2025,8 @@
   )
 
 (and
- ;; Everyone loves triangles, and it's easy to understand why&mdash;they're
- ;; so wonderfully symmetric (except scalenes, they suck).
+ ;; Everyone loves triangles, and it's easy to understand why---they're so
+ ;; wonderfully symmetric (except scalenes, they suck).
  ;;
  ;; Your passion for triangles has led you to become a miner (and part-time
  ;; Clojure programmer) where you work all day to chip out isosceles-shaped
@@ -2053,30 +2048,27 @@
  ;; must return the cross-sectional area of the largest harvestable mineral
  ;; from the input rock, as follows:
  ;;
- ;; <br>
+ ;; - The minerals only have smooth faces when sheared vertically or
+ ;;   horizontally from the rock's cross-section
  ;;
- ;; <ul>
+ ;; - The mine is only concerned with harvesting isosceles triangles (such
+ ;;   that one or two sides can be sheared)
  ;;
- ;; <li>The minerals only have smooth faces when sheared vertically or
- ;; horizontally from the rock's cross-section</li>
+ ;; - If only one face of the mineral is sheared, its opposing vertex must
+ ;;   be a point (ie. the smooth face must be of odd length), and its two
+ ;;   equal-length sides must intersect the shear face at 45&deg; (ie. those
+ ;;   sides must cut even-diagonally)
  ;;
- ;; <li>The mine is only concerned with harvesting isosceles triangles (such
- ;; that one or two sides can be sheared)</li>
+ ;; - The harvested mineral may not contain any traces of rock
  ;;
- ;; <li>If only one face of the mineral is sheared, its opposing vertex must
- ;; be a point (ie. the smooth face must be of odd length), and its two
- ;; equal-length sides must intersect the shear face at 45&deg; (ie. those
- ;; sides must cut even-diagonally)</li>
+ ;; - The mineral may lie in any orientation in the plane
  ;;
- ;; <li>The harvested mineral may not contain any traces of rock</li>
+ ;; - Area should be calculated as the sum of 1s that comprise the mineral
  ;;
- ;; <li>The mineral may lie in any orientation in the plane</li>
+ ;; - Minerals must have a minimum of three measures of area to be harvested
  ;;
- ;; <li>Area should be calculated as the sum of 1s that comprise the mineral</li>
- ;;
- ;; <li>Minerals must have a minimum of three measures of area to be harvested</li>
- ;;
- ;; <li>If no minerals can be harvested from the rock, your function should return nil</li>
+ ;; - If no minerals can be harvested from the rock, your function should
+ ;;   return nil
  ;;
  ;; </ul>
 (= 10 (__ [15 15 15 15 15]))
@@ -2126,14 +2118,20 @@
 ;;; http://www.4clojure.com/problem/138
 
 (def __
-  (fn [s]
-    )
+  (fn [start end]
+    (let [square-vals (take-while #(<= % end) (iterate #(* % %) start))
+          val-string (apply str square-vals)
+          len-val-string (count val-string)
+          next-power-of-2-above-length (first (drop-while #(< % len-val-string) (iterate #(* 2 %) 1)))
+          num-stars (- next-power-of-2-above-length len-val-string)
+          padded-val-string (str val-string (apply str (repeat num-stars "*")))]
+      padded-val-string))
   )
 
 (and
  ;; Create a function of two integer arguments: the start and end,
- ;; respectively. You must create a vector of strings which renders a
- ;; 45&deg; rotated square of integers which are successive squares from the
+ ;; respectively. You must create a vector of strings which renders a 45
+ ;; degree rotated square of integers which are successive squares from the
  ;; start point up to and including the end point. If a number comprises
  ;; multiple digits, wrap them around the shape individually. If there are
  ;; not enough digits to complete the shape, fill in the rest with asterisk
@@ -2142,29 +2140,56 @@
  ;; direction being down and to the right.
  (= (__ 2 2) ["2"])
  (= (__ 2 4) [" 2 "
-             "* 4"
-             " * "])
+              "* 4"
+              " * "])
  (= (__ 3 81) [" 3 "
-              "1 9"
-              " 8 "])
+               "1 9"
+               " 8 "])
  (= (__ 4 20) [" 4 "
-              "* 1"
-              " 6 "])
+               "* 1"
+               " 6 "])
  (= (__ 2 256) ["  6  "
-               " 5 * "
-               "2 2 *"
-               " 6 4 "
-               "  1  "])
+                " 5 * "
+                "2 2 *"
+                " 6 4 "
+                "  1  "])
  (= (__ 10 10000) ["   0   "
-                  "  1 0  "
-                  " 0 1 0 "
-                  "* 0 0 0"
-                  " * 1 * "
-                  "  * *  "
-                  "   *   "]) )
+                   "  1 0  "
+                   " 0 1 0 "
+                   "* 0 0 0"
+                   " * 1 * "
+                   "  * *  "
+                   "   *   "]) )
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/140
+
+(defn char-to-power-of-2 [c num-bits]
+  (let [diff (- (int c) (int \A))
+        pos (dec (- num-bits diff))]
+  (int (Math/pow 2 pos))))
+
+(defn sym-to-power-of-2 [sym num-bits]
+  (let [c (first (str sym))]
+    (if (Character/isUpperCase c)
+      (char-to-power-of-2 c num-bits)
+      0)))
+
+(defn func-input-value [s]
+  "Given a set of input symbols, return the single value that corresponds to
+1 bits where symbols are true and 0 bits where symbols are false. Assumes
+symbles are in the alphabet #{'a, 'A, 'b, 'B, ...}."
+  (let [num-bits (count s)]
+    (reduce + (map #(sym-to-power-of-2 % num-bits) s))))
+
+(def gray-codes {2 [0 1 3 2], 3 [0 1 3 2 6 7 5 4], 4 [0 1 3 2 6 7 5 4 12 13 15 14 10 11 9 8]})
+
+;; (defn k-map [ss]
+;;   (let [num-bits (count ss)
+;;         gray-code (get gray-codes num-bits)
+;;         true-inputs (map func-input-value ss)
+;;         k-map 
+;;     ;; 
 
 (def __
   (fn [s]
@@ -2176,16 +2201,16 @@
  ;; the form of a set of sets, where the inner sets are collections of
  ;; symbols corresponding to the input boolean variables which satisfy the
  ;; function (the inputs of the inner sets are conjoint, and the sets
- ;; themselves are disjoint... also known as canonical minterms).
- ;; Note:&nbsp;capitalized symbols represent truth, and lower-case symbols
- ;; represent negation of the inputs. Your function must return the minimal
- ;; function which is logically equivalent to the input.
+ ;; themselves are disjoint... also known as canonical minterms). Note:
+ ;; capitalized symbols represent truth, and lower-case symbols represent
+ ;; negation of the inputs. Your function must return the minimal function
+ ;; which is logically equivalent to the input.
  ;;
- ;; PS &mdash; You may want to give this a read before proceeding: <a
+ ;; PS --- You may want to give this a read before proceeding: <a
  ;; href="http://en.wikipedia.org/wiki/K_map">K-Maps</a>
  ;;
- ;; PPS &mdash; If you're interested in logic programming more generally,
- ;; you should also check out: <a
+ ;; PPS --- If you're interested in logic programming more generally, you
+ ;; should also check out: <a
  ;; href="https://github.com/clojure/core.logic">core.logic</a>
  (= (__ #{#{'a 'B 'C 'd}
          #{'A 'b 'c 'd}
