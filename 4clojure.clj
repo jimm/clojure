@@ -1352,6 +1352,86 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/138
+
+(def __
+  (fn [start end]
+    (let [square-vals (take-while #(<= % end) (iterate #(* % %) start))
+          val-string (apply str square-vals)
+          len-val-string (count val-string)
+          next-square-above-length (first (drop-while #(< % len-val-string) (map #(* % %) (drop 1 (range)))))
+          num-stars (- next-square-above-length len-val-string)
+          padded-val-string (str val-string (apply str (repeat num-stars "*")))
+
+          square-size (int (Math/sqrt next-square-above-length))
+          canvas-size (+ square-size (dec square-size))
+
+          compressed-y-deltas '((2 -1) (4 1) (6 -1) (8 1))
+          compressed-x-deltas '((1 1) (3 -1) (5 1) (7 -1))
+          uncompress-deltas (fn [cds] (flatten (map #(repeat (first %) (second %)) cds)))
+          deltas (fn [] (map #(list %1 %2)
+                             (uncompress-deltas compressed-x-deltas)
+                             (uncompress-deltas compressed-y-deltas)))
+
+          ;; coordinates for each character in order, starting at (0, 0)
+          coords (take (count padded-val-string)
+                       (reductions #(list (+ (first %1) (first %2))
+                                          (+ (second %1) (second %2)))
+                                   '(0 0)
+                                   (deltas)))
+          x-offset (Math/abs (apply min (map first coords)))
+          y-offset (Math/abs (apply min (map second coords)))
+          offset-coords (map #(list (+ x-offset (first %)) (+ y-offset (second %))) coords)
+          spiral (zipmap offset-coords padded-val-string) ; key = coord, val = char
+
+          paint-on-canvas (fn [canvas col row c]
+                            (assoc canvas row
+                                   (assoc (nth canvas row) col c)))
+          ]
+      ;; Turn sprial map {coord1 char1, coord2 char2, ...} into strings
+      (loop [keys (keys spiral)
+             canvas (into [] (repeat canvas-size (into [] (repeat canvas-size \space))))]
+        (if (empty? keys)
+          (reverse (map #(apply str %) canvas))
+          (let [key (first keys)
+                [col row] key]
+            (recur (next keys) (paint-on-canvas canvas col row (get spiral key))))))))
+  )
+
+(and
+ ;; Create a function of two integer arguments: the start and end,
+ ;; respectively. You must create a vector of strings which renders a 45
+ ;; degree rotated square of integers which are successive squares from the
+ ;; start point up to and including the end point. If a number comprises
+ ;; multiple digits, wrap them around the shape individually. If there are
+ ;; not enough digits to complete the shape, fill in the rest with asterisk
+ ;; characters. The direction of the drawing should be clockwise, starting
+ ;; from the center of the shape and working outwards, with the initial
+ ;; direction being down and to the right.
+ (= (__ 2 2) ["2"])
+ (= (__ 2 4) [" 2 "
+              "* 4"
+              " * "])
+ (= (__ 3 81) [" 3 "
+               "1 9"
+               " 8 "])
+ (= (__ 4 20) [" 4 "
+               "* 1"
+               " 6 "])
+ (= (__ 2 256) ["  6  "
+                " 5 * "
+                "2 2 *"
+                " 6 4 "
+                "  1  "])
+ (= (__ 10 10000) ["   0   "
+                   "  1 0  "
+                   " 0 1 0 "
+                   "* 0 0 0"
+                   " * 1 * "
+                   "  * *  "
+                   "   *   "]) )
+
+;;; ****************************************************************
 ;;; Solved, not yet submitted
 ;;; ****************************************************************
 
@@ -2113,99 +2193,6 @@
 ; 00000  ->  00000
 ; 11111      11111
 ; 00000      00000 )
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/138
-
-(def __
-  (fn [start end]
-    (let [square-vals (take-while #(<= % end) (iterate #(* % %) start))
-          val-string (apply str square-vals)
-          len-val-string (count val-string)
-          next-square-above-length (first (drop-while #(< % len-val-string) (map #(* % %) (drop 1 (range)))))
-          num-stars (- next-square-above-length len-val-string)
-          padded-val-string (str val-string (apply str (repeat num-stars "*")))
-
-          square-size (int (Math/sqrt next-square-above-length))
-          canvas-size (+ square-size (dec square-size))
-
-          compressed-y-deltas '((2 -1) (4 1) (6 -1) (8 1))
-          compressed-x-deltas '((1 1) (3 -1) (5 1) (7 -1))
-          uncompress-deltas (fn [cds] (flatten (map #(repeat (first %) (second %)) cds)))
-          deltas (fn [] (map #(list %1 %2)
-                             (uncompress-deltas compressed-x-deltas)
-                             (uncompress-deltas compressed-y-deltas)))
-
-          ;; coordinates for each character in order, starting at (0, 0)
-          coords (take (count padded-val-string)
-                       (reductions #(list (+ (first %1) (first %2))
-                                          (+ (second %1) (second %2)))
-                                   '(0 0)
-                                   (deltas)))
-
-          x-offset (dec square-size)
-; FIXME y-offset does not work yet
-          y-offset (if (odd? (int (/ square-size 2)))
-                     (- square-size 2)
-                     (dec square-size))
-          spiral (zipmap (map #(list (+ x-offset (first %))
-; FIXME off by one for every other size
-                                     (+ y-offset (- (second %))))
-                              coords)
-                         padded-val-string) ; key = coord, val = char
-
-          paint-on-canvas (fn [canvas col row c]
-                            (println "canvas" canvas "col" col "row" row "c" c) ; DEBUG
-                            (assoc canvas row
-                                   (assoc (nth canvas row) col c)))
-          ]
-      (println "coords" coords) ; DEBUG
-      (println "spiral" spiral) ; DEBUG
-      (println "canvas-size" canvas-size) ; DEBUG
-      ;; Turn sprial map {coord1 char1, coord2 char2, ...} into strings
-      (loop [keys (keys spiral)
-             canvas (into [] (repeat canvas-size (into [] (repeat canvas-size \space))))]
-        (println "keys" keys) ; DEBUG
-        (if (empty? keys)
-          (map #(apply str %) canvas)
-          (let [key (first keys)
-                [col row] key
-                char (get spiral key)]
-            (recur (next keys) (paint-on-canvas canvas col row char)))))))
-  )
-
-(and
- ;; Create a function of two integer arguments: the start and end,
- ;; respectively. You must create a vector of strings which renders a 45
- ;; degree rotated square of integers which are successive squares from the
- ;; start point up to and including the end point. If a number comprises
- ;; multiple digits, wrap them around the shape individually. If there are
- ;; not enough digits to complete the shape, fill in the rest with asterisk
- ;; characters. The direction of the drawing should be clockwise, starting
- ;; from the center of the shape and working outwards, with the initial
- ;; direction being down and to the right.
- (= (__ 2 2) ["2"])
- (= (__ 2 4) [" 2 "
-              "* 4"
-              " * "])
- (= (__ 3 81) [" 3 "
-               "1 9"
-               " 8 "])
- (= (__ 4 20) [" 4 "
-               "* 1"
-               " 6 "])
- (= (__ 2 256) ["  6  "
-                " 5 * "
-                "2 2 *"
-                " 6 4 "
-                "  1  "])
- (= (__ 10 10000) ["   0   "
-                   "  1 0  "
-                   " 0 1 0 "
-                   "* 0 0 0"
-                   " * 1 * "
-                   "  * *  "
-                   "   *   "]) )
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/140
