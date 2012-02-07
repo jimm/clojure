@@ -1436,50 +1436,25 @@
 ;;; ****************************************************************
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/125
-
-;; This is a solution, but it's not mine.
-(fn []
- (let [a ["(fn [] (let [a "
-          "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
-
-
-;; Note: this test won't work in the REPL. You need to literally substitute
-;; the text of the function's definition for each "__".
-(and
- ;; Create a function of no arguments which returns a string that is an
- ;; exact copy of the function itself.
- ;;
- ;; Hint: read up on Quines if you get stuck (this question is harder than
- ;; it first appears); but it's worth the effort to solve it independently
- ;; if you can!
- ;;
- (= (str '__) (__))
-)
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/112
-
-;; infinite loop because not lazy
-;; need to take from front, not from back
 
 (def __
   (fn [n itree]
-    (letfn [(take-flat [n tree]
+    (letfn [(remove-last-leaf-node [tree]
               (let [all-but-last-node (butlast tree)
                     last-node (last tree)]
                 (if (coll? last-node)
-                  (assoc (into [] tree) (dec (count tree)) (remove-last-leaf-node last-node))
-                  (into [] all-but-last-node))))]
-      (lazy-seq
-       (loop [itree itree]
-         (if (<= (apply + (flatten itree)) n)
-           itree
-           (recur (remove-last-leaf-node itree)))))))
+                  (if (empty? last-node)
+                    (into [] all-but-last-node)
+                    (assoc (into [] tree) (dec (count tree)) (remove-last-leaf-node last-node)))
+                  (into [] all-but-last-node))))
+            (max-top-level-elements-needed [tree]
+              (count (take-while #(<= % n)
+                                 (reductions + (flatten tree)))))]
+       (loop [itree (take (max-top-level-elements-needed itree) itree)] ; at most n top-level will be used
+          (if (<= (apply + (flatten itree)) n)
+            itree
+            (recur (remove-last-leaf-node itree))))))
   )
 
 (and
@@ -1503,6 +1478,40 @@
  (=  (__ 1 [-10 [1 [2 3 [4 5 [6 7 [8]]]]]])
      '(-10 (1 (2 3 (4)))))
  )
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Thus endeth the medium problems. Here begin-eth the hard ones.
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/125
+
+;; This is a solution, but it's not mine.
+;; Can I use format?
+(fn []
+ (let [a ["(fn [] (let [a "
+          "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
+
+; FIXME
+(fn [] (let [s "(fn [] (let [s (str \\% \\s)] (format s s)))"] (format s s)))
+
+
+;; Note: this test won't work in the REPL. You need to literally substitute
+;; the text of the function's definition for each "__".
+(and
+ ;; Create a function of no arguments which returns a string that is an
+ ;; exact copy of the function itself.
+ ;;
+ ;; Hint: read up on Quines if you get stuck (this question is harder than
+ ;; it first appears); but it's worth the effort to solve it independently
+ ;; if you can!
+ ;;
+ (= (str '__) (__))
+)
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/141
@@ -1600,10 +1609,6 @@
  (= (nth (__ 0) 10101)
     9102019)
  )
-
-;;; ****************************************************************
-;;; Thus endeth the medium problems. Here begin-eth the hard ones.
-;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/91
