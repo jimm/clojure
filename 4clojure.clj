@@ -1432,10 +1432,6 @@
                    "   *   "]) )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/112
 
 (def __
@@ -1480,28 +1476,14 @@
  )
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Thus endeth the medium problems. Here begin-eth the hard ones.
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/125
 
-;; This is a solution, but it's not mine.
-;; Can I use format?
-(fn []
- (let [a ["(fn [] (let [a "
-          "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
-
-; FIXME
-(fn [] (let [s "(fn [] (let [s (str \\% \\s)] (format s s)))"] (format s s)))
-
+;; This solution is not mine.
+(fn [] (let [a ["(fn [] (let [a " "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
 
 ;; Note: this test won't work in the REPL. You need to literally substitute
-;; the text of the function's definition for each "__".
+;; the text of the function's definition for each "__" instead of just
+;; assigning the function to a var named "__".
 (and
  ;; Create a function of no arguments which returns a string that is an
  ;; exact copy of the function itself.
@@ -1512,6 +1494,18 @@
  ;;
  (= (str '__) (__))
 )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Thus endeth the medium problems. Here begin-eth the hard ones.
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/141
