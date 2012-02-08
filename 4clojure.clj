@@ -1496,31 +1496,13 @@
 )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Thus endeth the medium problems. Here begin-eth the hard ones.
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/141
 
 (def __
   (fn [trump-suit]
-    (fn [cards] (reduce {(:suit (first cards)) 0} ; starting value is suit that was led, 0 face value
-                        (fn [best card]
-                          (cond (= trump-suit (:suit card)) {:suit trump-suit :rank (max (:rank card) (:rank best))}
-                                (= trump-suit (:suit best)) best
-                                (= (:suit card) (:suit (first cards))) {:suit (:suit card) :rank (max (:suit card (:suit best)))} ; ??
-                                :else (if (> (:rank card) (:rank best))
-                                        {:suit (:suit card) :rank (:rank card)}
-                                        best)))
-                        cards)))
+    (fn [cards]
+      (let [eligible-cards (filter #(= (or trump-suit (:suit (first cards))) (:suit %)) cards)]
+        (apply max-key :rank eligible-cards))))
   )
 
 (and
@@ -1564,13 +1546,27 @@
                                  half (/ len 2)]
                              [(subs s 0 half)
                               (if (even? len) "" (subs s half (inc half)))
-                              (subs s (if (odd? len) (inc half) half))]))]
-      (let [[beg mid end] (split-num n)
-            start-num (if (palindrome? n)
-                        n
-                        (Integer/parseInt (apply str (concat beg mid (reverse beg)))))]
-;; Nope. Turns 1222 into 1221.
-        (println "start-num =" start-num))))
+                              (subs s (if (odd? len) (inc half) half))]))
+            (incstr [s] (if (empty? s)
+                          "1"
+                          (str (inc (read-string s)))))
+
+            (palindrome-after [pal]
+              (let [[beg mid end] (split-num pal)
+                    all-nines? (fn [str] (empty? (filter #(not= \9 %) str)))]
+                (cond (all-nines? beg) (first (filter palindrome? (iterate inc (inc pal))))
+                      (empty? mid) (let [s (incstr beg)] (read-string (str s (apply str (reverse s)))))
+                      (= "9" mid)  (if (empty? beg)
+                                     11
+                                     (let [s (incstr beg)] (read-string (str s "0" (apply str (reverse s))))))
+                      :else        (read-string (str beg (incstr mid) end)))))
+            (lazy-palindrome-generator [pal]
+              (let [next-pal (palindrome-after pal)]
+                (lazy-seq
+                 (cons next-pal (lazy-palindrome-generator next-pal)))))]
+      (let [start-num (first (filter palindrome? (iterate inc n)))]
+        (lazy-seq
+         (cons start-num (lazy-palindrome-generator start-num))))))
   )
 
 (and
@@ -1603,6 +1599,14 @@
  (= (nth (__ 0) 10101)
     9102019)
  )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/91
