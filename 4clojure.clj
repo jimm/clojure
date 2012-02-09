@@ -1605,15 +1605,38 @@
 ;;; ****************************************************************
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/91
 
 (def __
-  (fn [s]
-    )
+  (fn [edges]
+    (letfn [(merge-if-intersection [vertex-partition [v1 v2]]
+              (let [v1-partitions (filter #(some #{v1} %) vertex-partition)
+                    v2-partitions (filter #(some #{v2} %) vertex-partition)]
+                (if (= v1-partitions v2-partitions)
+                  (let [joined (into #{} (flatten (map seq v1-partitions)))
+                        not-in-joined (for [p vertex-partition :when (not (some p joined))] p)]
+                    (into #{} (conj not-in-joined joined))
+                    )
+                  vertex-partition)))
+            (add-edge-to-partition [vertex-partition edge]
+              (let [[v1 v2] edge
+                    edge-set (into #{} edge)
+                    vp-as-seq (flatten (map seq vertex-partition))
+                    new-partition (if (or (some #{v1} vp-as-seq)
+                                          (some #{v2} vp-as-seq))
+                                    (for [s vertex-partition]
+                                      (if (some edge-set s)
+                                        (conj (conj s v1) v2)
+                                        s))
+                                    ;; else
+                                    (conj vertex-partition edge-set))]
+                (merge-if-intersection new-partition edge)))]
+      (= 1 (count
+            (loop [edges edges
+                   vertex-partition []]
+              (if (empty? edges)
+                vertex-partition
+                (recur (next edges) (add-edge-to-partition vertex-partition (first edges)))))))))
   )
 
 (and
@@ -1622,10 +1645,10 @@
  ;; nodes.
  ;;
  ;; - Your function must return true if the graph is connected and false
- ;; - otherwise.
+ ;;   otherwise.
  ;;
- ;; -You will be given a set of tuples representing the edges of a graph.
- ;;  Each member of a tuple being a vertex/node in the graph.
+ ;; - You will be given a set of tuples representing the edges of a graph.
+ ;;   Each member of a tuple being a vertex/node in the graph.
  ;;
  ;; - Each edge is undirected (can be traversed either direction).
  (= true (__ #{[:a :a]}))
@@ -1637,7 +1660,12 @@
  (= false (__ #{[:a :b] [:b :c] [:c :d]
                [:x :y] [:d :a] [:b :e]}))
  (= true (__ #{[:a :b] [:b :c] [:c :d]
-              [:x :y] [:d :a] [:b :e] [:x :a]})) )
+              [:x :y] [:d :a] [:b :e] [:x :a]}))
+)
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/101
