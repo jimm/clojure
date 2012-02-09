@@ -1601,10 +1601,6 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/91
 
 (def __
@@ -1664,15 +1660,23 @@
 )
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/101
 
 (def __
-  (fn [s]
-    )
+  (fn [s t]
+    (let [m (inc (count s))
+          n (inc (count t))
+          a (to-array-2d (repeat m (repeat n 0)))]
+       (doseq [i (range m)
+               j (range n)]
+         (cond (zero? j) (aset a i 0 i)
+               (zero? i) (aset a 0 j j)
+               (= (nth s (dec i)) (nth t (dec j))) (aset a i j (aget a (dec i) (dec j)))
+               :else
+               (aset a i j (min (inc (aget a (dec i) j))
+                                (inc (aget a i (dec j)))
+                                (inc (aget a (dec i) (dec j)))))))
+       (last (last a))))
   )
 
 (and
@@ -1698,11 +1702,85 @@
  (= (__ "gaattctaatctc" "caaacaaaaaattt") 9) )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/73
+
+(def __
+(fn [board]
+    (letfn [(sym-at [row col] (nth (nth board row) col))
+            (won? [sym]
+              (let [sss [sym sym sym]]
+                (or (= (nth board 0) sss) ; horizontal
+                    (= (nth board 1) sss)
+                    (= (nth board 2) sss)
+                    (= (map #(nth % 0) board) sss) ; diagonal
+                    (= (map #(nth % 1) board) sss)
+                    (= (map #(nth % 2) board) sss)
+                    (= (list (sym-at 0 0) (sym-at 1 1) (sym-at 2 2)) sss)
+                    (= (list (sym-at 0 2) (sym-at 1 1) (sym-at 0 2)) sss))))]
+      (cond (won? :x) :x
+            (won? :o) :o
+            :else nil)))
+)
+
+(and
+ ;; A tic-tac-toe board is represented by a two dimensional vector. X is
+ ;; represented by :x, O is represented by :o, and empty is represented by
+ ;; :e. A player wins by placing three Xs or three Os in a horizontal,
+ ;; vertical, or diagonal row. Write a function which analyzes a tic-tac-toe
+ ;; board and returns :x if X has won, :o if O has won, and nil if neither
+ ;; player has won.
+ (= nil (__ [[:e :e :e] [:e :e :e] [:e :e :e]]))
+ (= :x (__ [[:x :e :o]
+            [:x :e :e]
+            [:x :e :o]]))
+ (= :o (__ [[:e :x :e]
+            [:o :o :o]
+            [:x :e :x]]))
+ (= nil (__ [[:x :e :o]
+             [:x :x :e]
+             [:o :x :o]]))
+ (= :x (__ [[:x :e :e]
+            [:o :x :e]
+            [:o :e :x]]))
+ (= :o (__ [[:x :e :o]
+            [:x :o :e]
+            [:o :e :x]]))
+ (= nil (__ [[:x :o :x]
+             [:x :o :x]
+             [:o :x :o]]))
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/94
 
 (def __
-  (fn [s]
-    )
+  (fn [board]
+    (let [width (count (nth board 0))
+          height (count board)]
+      (letfn [(cell [row col] (get-in board [(mod row height) (mod col width)]))
+              (live? [c] (= \# c))
+              (live-neighbors [row col]
+                (-
+                 (count (for [r (range (dec row) (+ 2 row))
+                              c (range (dec col) (+ 2  col))
+                              :when (live? (cell r c))]
+                          1))
+                 (if (live? (cell row col)) 1 0)))]
+        ;; Could memoize cell but these boards are small and we're only
+        ;; calculating one generation.
+        (map #(apply str %)
+             (partition width
+                        (for [row (range height)
+                              col (range width)
+                              :let [is-live (live? (cell row col))
+                                    ln (live-neighbors row col)]]
+                          (if is-live
+                            (cond (< ln 2) \space           ; underpopulation
+                                  (or (= 2 ln) (= 3 ln)) \# ; continue living
+                                  (> ln 3) \space)          ; overpopulation
+                            (if (= ln 3)
+                              \#        ; birth
+                              \space)))))
+    )))
   )
 
 (and
@@ -1767,8 +1845,17 @@
 ;;; http://www.4clojure.com/problem/106
 
 (def __
-  (fn [s]
-    )
+  (fn [start end]
+    ;; Wasteful because we don't avoid loops (double then halve, for
+    ;; example). Good enough, though.
+    (loop [path-length 1
+           ns (list start)]
+      (if (some #{end} ns)
+        path-length
+        (recur (inc path-length)
+               (concat (map #(* % 2) ns)
+                       (filter integer? (map #(/ % 2) ns))
+                       (map #(+ % 2) ns))))))
   )
 
 (and
@@ -1791,6 +1878,48 @@
  (= 9 (__ 9 2))  ; 9 18 20 10 12 6 8 4 2
  (= 5 (__ 9 12)) ; 9 11 22 24 12
  )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/113
+
+;; see reify
+
+(def __
+  (fn [& is]
+    (reify clojure.lang.Seqable
+      (toString [this]
+        (apply str (interpose ", " (sort is))))
+      (seq [this]
+        (loop [is is
+               seen #{}
+               answer []]
+          (cond (empty? is) (seq answer)
+                (some #{(first is)} seen) (recur (next is) seen answer)
+                :else (recur (next is) (conj seen (first is)) (conj answer (first is))))))))
+  )
+
+(and
+ ;; Write a function that takes a variable number of integer arguments. If
+ ;; the output is coerced into a string, it should return a comma (and
+ ;; space) separated list of the inputs sorted smallest to largest. If the
+ ;; output is coerced into a sequence, it should return a seq of unique
+ ;; input elements in the same order as they were entered.
+ (= "1, 2, 3" (str (__ 2 1 3)))
+ (= '(2 1 3) (seq (__ 2 1 3)))
+ (= '(2 1 3) (seq (__ 2 1 3 3 1 2)))
+ (= '(1) (seq (apply __ (repeat 5 1))))
+ (= "1, 1, 1, 1, 1" (str (apply __ (repeat 5 1))))
+ (and (= nil (seq (__)))
+      (=  "" (str (__))))
+)
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/89
@@ -1821,34 +1950,6 @@
               [:b :e] [:a :d] [:b :d] [:c :e]
               [:d :e] [:c :f] [:d :f]]))
  (= false (__ [[1 2] [2 3] [2 4] [2 5]])) )
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/113
-
-(def __
-  (fn [& is]
-    (loop [is is
-           seen #{}
-           answer []]
-      (let [i (first is)]
-        (cond (empty? is) answer
-              (some #{i} seen) (recur (next is) seen answer)
-              :else (recur (next is) (conj seen i) (conj answer i))))))
-  )
-
-(and
- ;; Write a function that takes a variable number of integer arguments. If
- ;; the output is coerced into a string, it should return a comma (and
- ;; space) separated list of the inputs sorted smallest to largest. If the
- ;; output is coerced into a sequence, it should return a seq of unique
- ;; input elements in the same order as they were entered.
- (= "1, 2, 3" (str (__ 2 1 3)))
- (= '(2 1 3) (seq (__ 2 1 3)))
- (= '(2 1 3) (seq (__ 2 1 3 3 1 2)))
- (= '(1) (seq (apply __ (repeat 5 1))))
- (= "1, 1, 1, 1, 1" (str (apply __ (repeat 5 1))))
- (and (= nil (seq (__)))
-     (=  "" (str (__)))) )
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/117
@@ -1918,16 +2019,16 @@
   )
 
 (and
- ;; <p>As in <a href="/problem/73">Problem 73</a>, a tic-tac-toe board is
+ ;; As in <a href="/problem/73">Problem 73</a>, a tic-tac-toe board is
  ;; represented by a two dimensional vector. X is represented by :x, O is
  ;; represented by :o, and empty is represented by :e. Create a function
  ;; that accepts a game piece and board as arguments, and returns a set
  ;; (possibly empty) of all valid board placements of the game piece which
- ;; would result in an immediate win.</p>
+ ;; would result in an immediate win.
  ;;
- ;; <p>Board coordinates should be as in calls to <code>get-in</code>. For
- ;; example, <code>[0 1]</code> is the topmost row, center position.</p><br
- ;; />(= (__ :x [[:o :e :e]
+ ;; Board coordinates should be as in calls to <code>get-in</code>. For
+ ;; example, <code>[0 1]</code> is the topmost row, center position.
+ (= (__ :x [[:o :e :e]
            [:o :x :o] 
            [:x :x :e]])
    #{[2 2] [0 1] [0 2]})
