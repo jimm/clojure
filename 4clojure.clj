@@ -2017,13 +2017,27 @@
                                                 (= mouse-dir :down) :right
                                                 (= mouse-dir :left) :down
                                                 (= mouse-dir :right) :up))
-                  [target-loc mouse-dir])))]
+                    [target-loc mouse-dir])))
+              ;; For debugging only
+              (draw-maze [mouse-pos]
+                (let [[mrow mcol] mouse-pos
+                      print-horiz-wall (fn [] (println (apply str (repeat (+ 2 width) \#))))
+                      print-row (fn [row-str] (println (str "#" row-str "#")))]
+                  (println)
+                  (print-horiz-wall)
+                  (dotimes [row height]
+                    (let [row-str (.replace (nth maze row) \M \space)] ; erase original mouse
+                      (print-row (if (= mrow row) ; place mouse at mouse-pos
+                                   (str (subs row-str 0 mcol) "M" (subs row-str (inc mcol)))
+                                   row-str))))
+                  (print-horiz-wall)))
+              ]
         ;; Here we go
-;; FIXME need to track visited direction as well as visited cell
         (let [cheese-pos (find-in-maze \C)]
           (loop [mouse-pos (find-in-maze \M)
                  mouse-dir (pick-initial-direction)
-                visited #{}]
+                 visited #{}]
+            (draw-maze mouse-pos)       ; DEBUG
             (cond (= mouse-pos cheese-pos) true
                   (some #{[mouse-pos mouse-dir]} visited) false
                   :else (let [[next-pos next-dir] (move-mouse mouse-pos mouse-dir)]
