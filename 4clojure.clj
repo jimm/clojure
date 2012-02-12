@@ -1987,6 +1987,11 @@
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/117
 
+;; http://www.astrolog.org/labyrnth/algrithm.htm
+;;
+;; TODO flood fill from mouse. If hit cheese, return true. If fill up with
+;; wall and can't fill any furtyer, return false.
+
 (def __
   (fn [maze]
     ;; Assumes maze is simply connected
@@ -2007,9 +2012,11 @@
                       (= direction :down)  [(inc row) col]
                       (= direction :left)  [row (dec col)]
                       (= direction :right) [row (inc col)]))
-              (pick-initial-direction []
-                :up
-                )
+              (pick-initial-direction [[row col]]
+                (cond (wall? [(inc row) col]) :right
+                      (wall? [row (inc col)]) :up
+                      (wall? [(dec row) col]) :left
+                      (wall? [row (dec col)]) :down))
               (move-mouse [mouse-pos mouse-dir] ; return [next-pos next-dir]
                 (let [target-loc (coords-for-dir mouse-pos mouse-dir)]
                   (if (wall? target-loc)
@@ -2034,8 +2041,9 @@
               ]
         ;; Here we go
         (let [cheese-pos (find-in-maze \C)]
+          (println "init dir" (pick-initial-direction (find-in-maze \M))) ; DEBUG
           (loop [mouse-pos (find-in-maze \M)
-                 mouse-dir (pick-initial-direction)
+                 mouse-dir (pick-initial-direction mouse-pos)
                  visited #{}]
             (draw-maze mouse-pos)       ; DEBUG
             (cond (= mouse-pos cheese-pos) true
