@@ -1977,79 +1977,65 @@
 )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/117
 
 ;; http://www.astrolog.org/labyrnth/algrithm.htm
 ;;
 ;; TODO flood fill from mouse. If hit cheese, return true. If fill up with
 ;; wall and can't fill any furtyer, return false.
+;;
+;; get mouse loc
+;; turn into space
+;; flood fill starting at mouse loc
+;;
+;; algorithm
+;;
+;; Flood-fill (node, target-color, replacement-color):
+;;  1. If the color of node is not equal to target-color, return.
+;;  2. Set the color of node to replacement-color.
+;;  3. Perform Flood-fill (one step to the west of node, target-color, replacement-color).
+;;     Perform Flood-fill (one step to the east of node, target-color, replacement-color).
+;;     Perform Flood-fill (one step to the north of node, target-color, replacement-color).
+;;     Perform Flood-fill (one step to the south of node, target-color, replacement-color).
+;;  4. Return.
+
 
 (def __
   (fn [maze]
-    ;; Assumes maze is simply connected
+    ;; Assumes maze is simply connected. Flood-fills the maze starting at
+    ;; the mouse position. If we hit the cheese, then the mouse can get
+    ;; there, too.
     (let [width (count (nth maze 0))
-          height (count maze)]
+          height (count maze)
+          cheese-found (ref false)]
       (letfn [(in-bounds? [row col] (and (>= row 0) (>= col 0) (< row height) (< col width)))
               (cell [row col]           ; return wall if out of bounds
                 (if (in-bounds? row col)
                   (get-in maze [row col] \#)))
-              (wall? [loc] (let [ch (cell (first loc) (second loc))]
-                             (if ch (= \# ch) true)))
               (find-in-maze [ch] ; return coords of first cell found containing ch
                 (first
                  (for [r (range height), c (range width) :when (= ch (cell r c))]
                    [r c])))
-              (coords-for-dir [[row col] direction] ; direction is :up, :down, :left, :right
-                (cond (= direction :up)    [(dec row) col]
-                      (= direction :down)  [(inc row) col]
-                      (= direction :left)  [row (dec col)]
-                      (= direction :right) [row (inc col)]))
-              (pick-initial-direction [[row col]]
-                (cond (wall? [(inc row) col]) :right
-                      (wall? [row (inc col)]) :up
-                      (wall? [(dec row) col]) :left
-                      (wall? [row (dec col)]) :down))
-              (move-mouse [mouse-pos mouse-dir] ; return [next-pos next-dir]
-                (let [target-loc (coords-for-dir mouse-pos mouse-dir)]
-                  (if (wall? target-loc)
-                    (move-mouse mouse-pos (cond (= mouse-dir :up)   :left
-                                                (= mouse-dir :down) :right
-                                                (= mouse-dir :left) :down
-                                                (= mouse-dir :right) :up))
-                    [target-loc mouse-dir])))
-              ;; For debugging only
-              (draw-maze [mouse-pos]
-                (let [[mrow mcol] mouse-pos
-                      print-horiz-wall (fn [] (println (apply str (repeat (+ 2 width) \#))))
-                      print-row (fn [row-str] (println (str "#" row-str "#")))]
-                  (println)
-                  (print-horiz-wall)
-                  (dotimes [row height]
-                    (let [row-str (.replace (nth maze row) \M \space)] ; erase original mouse
-                      (print-row (if (= mrow row) ; place mouse at mouse-pos
-                                   (str (subs row-str 0 mcol) "M" (subs row-str (inc mcol)))
-                                   row-str))))
-                  (print-horiz-wall)))
-              ]
+              (flood-fill [row col]     ; look for cheese while flooding
+                (let [visited (ref #{})]
+                  (letfn [(do-flood-fill [row col]
+                            (if (and (not @cheese-found)
+                                     (in-bounds? row col)
+                                     (nil? (some #{[row col]} @visited)))
+                              (let [ch (cell row col)]
+                                (cond (= ch \C) (dosync (ref-set cheese-found true)) ; cheese found
+                                      (or (= ch \space) (= ch \M)) (do
+                                                                     (dosync (alter visited conj [row col]))
+                                                                     (do-flood-fill (dec row) col)
+                                                                     (do-flood-fill (inc row) col)
+                                                                     (do-flood-fill row (dec col))
+                                                                     (do-flood-fill row (inc col)))))))]
+                    (do-flood-fill row col))))]
+                    
         ;; Here we go
-        (let [cheese-pos (find-in-maze \C)]
-          (println "init dir" (pick-initial-direction (find-in-maze \M))) ; DEBUG
-          (loop [mouse-pos (find-in-maze \M)
-                 mouse-dir (pick-initial-direction mouse-pos)
-                 visited #{}]
-            (draw-maze mouse-pos)       ; DEBUG
-            (cond (= mouse-pos cheese-pos) true
-                  (some #{[mouse-pos mouse-dir]} visited) false
-                  :else (let [[next-pos next-dir] (move-mouse mouse-pos mouse-dir)]
-                          (recur next-pos next-dir (conj visited [mouse-pos mouse-dir])))))))))
+        (let [mouse-pos (find-in-maze \M)]
+          (flood-fill (first mouse-pos) (second mouse-pos))
+          @cheese-found))))
   )
 
 (and
@@ -2074,35 +2060,43 @@
               "#  #  #"
               "#M # C#"
               "#######"]))
- ;; (= false (__ ["########"
- ;;              "#M  #  #"
- ;;              "#   #  #"
- ;;              "# # #  #"
- ;;              "#   #  #"
- ;;              "#  #   #"
- ;;              "#  # # #"
- ;;              "#  #   #"
- ;;              "#  #  C#"
- ;;              "########"]))
- ;; (= false (__ ["M     "
- ;;              "      "
- ;;              "      "
- ;;              "      "
- ;;              "    ##"
- ;;              "    #C"]))
- ;; (= true  (__ ["C######"
- ;;              " #     "
- ;;              " #   # "
- ;;              " #   #M"
- ;;              "     # "]))
- ;; (= true  (__ ["C# # # #"
- ;;              "        "
- ;;              "# # # # "
- ;;              "        "
- ;;              " # # # #"
- ;;              "        "
- ;;              "# # # #M"]))
+ (= false (__ ["########"
+              "#M  #  #"
+              "#   #  #"
+              "# # #  #"
+              "#   #  #"
+              "#  #   #"
+              "#  # # #"
+              "#  #   #"
+              "#  #  C#"
+              "########"]))
+ (= false (__ ["M     "
+              "      "
+              "      "
+              "      "
+              "    ##"
+              "    #C"]))
+ (= true  (__ ["C######"
+              " #     "
+              " #   # "
+              " #   #M"
+              "     # "]))
+ (= true  (__ ["C# # # #"
+              "        "
+              "# # # # "
+              "        "
+              " # # # #"
+              "        "
+              "# # # #M"]))
  )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/119
