@@ -2173,15 +2173,48 @@
 ;;; ****************************************************************
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/111
 
 (def __
-  (fn [s]
-    )
+  (fn [word board]
+    (let [word-len (count word)
+          height (count board)
+          board (into [] (map #(apply str (filter (fn [ch] (not= \space ch)) %)) board)) ; remove spaces
+          width (count (nth board 0))]
+      (letfn [(in-bounds? [row col] (and (>= row 0) (>= col 0) (< row height) (< col width)))
+              (cell [row col]           ; return wall if out of bounds
+                (if (in-bounds? row col)
+                  (get-in board [row col] \#)
+                  \#))
+              (fits-across? [row col]
+                (and (= \# (cell row (dec col)))
+                     (= word-len (count (for [i (range word-len)
+                                              :let [ch (cell row (+ col i))]
+                                              :when (or (= ch (nth word i))
+                                                        (= ch \_))]
+                                          1)))
+                     (= \# (cell row (+ col word-len)))))
+              (fits-down? [row col]
+                (and (= \# (cell (dec row) col))
+                     (= word-len (count (for [i (range word-len)
+                                              :let [ch (cell (+ row i) col)]
+                                              :when (or (= ch (nth word i))
+                                                        (= ch \_))]
+                                          1)))
+                     (= \# (cell (+ row word-len) col))))]
+        (if (or
+             ;; across
+             (first (filter true? (for [row (range height)
+                                        col (range (inc (- width word-len)))
+                                        :when (fits-across? row col)]
+                                    true)))
+             ;; down
+             (first (filter true? (for [row (range (inc (- height word-len)))
+                                        col (range width)
+                                        :when (fits-down? row col)]
+                                    true))))
+          true
+          false))))
   )
 
 (and
@@ -2226,6 +2259,10 @@
                         "_ _ o _ _ _ _"
                         "_ _ f _ # _ _"]))
  )
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/130
