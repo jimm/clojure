@@ -2091,19 +2091,49 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/119
 
 (def __
-  (fn [s]
-    )
+  (fn [piece board]
+    (letfn [(replace-in-board [piece row col]
+              (assoc board row (assoc (nth board row) col piece)))
+            (horiz-win? [board row col]
+              (or (and (= piece (get-in board [0 0]))
+                       (= piece (get-in board [0 1]))
+                       (= piece (get-in board [0 2])))
+                  (and (= piece (get-in board [1 0]))
+                       (= piece (get-in board [1 1]))
+                       (= piece (get-in board [1 2])))
+                  (and (= piece (get-in board [2 0]))
+                       (= piece (get-in board [2 1]))
+                       (= piece (get-in board [2 2])))))
+            (vert-win? [board row col]
+              (or (and (= piece (get-in board [0 0]))
+                       (= piece (get-in board [1 0]))
+                       (= piece (get-in board [2 0])))
+                  (and (= piece (get-in board [0 1]))
+                       (= piece (get-in board [1 1]))
+                       (= piece (get-in board [2 1])))
+                  (and (= piece (get-in board [0 2]))
+                       (= piece (get-in board [1 2]))
+                       (= piece (get-in board [2 2])))))
+            (diag-win? [board row col]
+              (or (and (= piece (get-in board [0 0]))
+                       (= piece (get-in board [1 1]))
+                       (= piece (get-in board [2 2])))
+                  (and (= piece (get-in board [0 2]))
+                       (= piece (get-in board [1 1]))
+                       (= piece (get-in board [2 0])))))
+            (won? [row col]
+              (let [board (replace-in-board piece row col)]
+                (or (horiz-win? board row col)
+                    (vert-win? board row col)
+                    (diag-win? board row col))))]
+                       
+      (into #{} (for [row (range 3) col (range 3)
+                      :when (and (= :e (get-in board [row col]))
+                                 (won? row col))]
+                  [row col]))))
   )
 
 (and
@@ -2135,7 +2165,16 @@
  (= (__ :o [[:x :x :o] 
            [:o :e :o] 
            [:x :e :e]])
-   #{[2 2] [1 1]}) )
+   #{[2 2] [1 1]})
+ )
+
+;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/111
