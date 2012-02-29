@@ -2257,19 +2257,35 @@
  )
 
 ;;; ****************************************************************
-;;; Solved, not yet submitted
-;;; ****************************************************************
-
-;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/130
 
 (def __
   (fn [new-root tree]
-    )
+    ;; Find target subtree
+    ;; Find parent
+    ;; Append parent, minus target subtree, to end of target subtree
+    ;; Wash, rinse, repeat
+    (letfn [(subtree-map [tree]
+              (let [ts (tree-seq coll? next tree)]
+                (zipmap (map first ts) ts)))
+            (parent-tree [node subtrees]
+              (first
+               (for [k (keys subtrees)
+                     :let [subtree (get subtrees k)]
+                     :when (some #{node} (map first (next subtree)))]
+                 subtree)))
+            (make-node-new-root [node subtrees child-subtree i]
+              (let [root-subtree (get subtrees node)
+                    parent (parent-tree node subtrees)
+                    parent-without-root-subtree (remove #(= root-subtree %) parent)]
+                (if (empty? parent)
+                  child-subtree
+                  (concat
+                   (list (first root-subtree))
+                   (remove #(= new-root (first %)) (next root-subtree))
+                   (list (make-node-new-root (first parent) subtrees parent-without-root-subtree (inc i)))))))]
+      (let [subtrees (subtree-map tree)]
+        (make-node-new-root new-root subtrees (get subtrees new-root) 0))))
   )
 
 (and
@@ -2354,8 +2370,30 @@
 ;;; http://www.4clojure.com/problem/124
 
 (def __
-  (fn [s]
-    )
+  (fn [board player]
+    (let [width (count (nth board 0))
+          height (count board)
+          dirs [[1 0] [-1 0] [0 1] [0 -1]
+                [1 1] [1 -1] [-1 -1] [-1 1]]
+          other-player (if (= player 'w) 'b 'w)]
+      (letfn [(next-loc-in-dir [loc dir]
+                [(+ (first loc) (first dir))
+                 (+ (second loc) (second dir))])
+              (legal-move [start-loc dir]
+                (loop [loc (next-loc-in-dir start-loc dir)
+                       captured #{}]
+                  (let [cell (get-in board loc nil)]
+                    (cond (= player cell) (if (empty? captured) [nil nil] [start-loc captured])
+                          (= other-player cell) (recur (next-loc-in-dir loc dir) (conj captured loc))
+                          :else [nil nil]))))]
+        (let [moves (for [row (range height)
+                          col (range width)
+                          dir dirs
+                          :when (= 'e (get-in board [row col]))
+                          :let [[move captured] (legal-move [row col] dir)]
+                          :when move]
+                      [move captured])]
+          (zipmap (map first moves) (map second moves))))))
   )
 
 (and
@@ -2393,7 +2431,20 @@
  )
 
 ;;; ****************************************************************
+;;; Solved, not yet submitted
+;;; ****************************************************************
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
+
+;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/127
+
+;; Start with any mineral piece and call it the point of a triangle. From
+;; there, try to form triangles at 45 degree angles in the four directions,
+;; and with shear faces starting there (eight possibilities: left and up,
+;; left and down, right and up, right and down, etc.).
 
 (def __
   (fn [s]
