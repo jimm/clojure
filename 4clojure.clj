@@ -2441,14 +2441,115 @@
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/127
 
-;; Start with any mineral piece and call it the point of a triangle. From
-;; there, try to form triangles at 45 degree angles in the four directions,
-;; and with shear faces starting there (eight possibilities: left and up,
-;; left and down, right and up, right and down, etc.).
-
 (def __
-  (fn [s]
-    )
+  (fn [matrix]
+    ;; We start with any mineral piece and call it the point of a triangle.
+    ;; From there, try to form cardinal and 45deg triangles (defined below).
+    ;; When the largest possible one is found, it is removed and we try
+    ;; again until there are no remaining triangles to be found. Note: we
+    ;; don't attempt to try to solve the packing problem; we just find the
+    ;; largest, then the next largest, etc. Given the sample data this seems
+    ;; adequate.
+    ;;
+    ;; A "cardinal" triangle is one that radiates from a point in a N, S, E,
+    ;; or W direction. Line lengths from the tip to the opposite side grows
+    ;; in length by two.
+    ;;
+    ;; A "45deg" triangle is one that radiates from a point in a NE, NW, SE,
+    ;; or SW direction in one of two orientations. One side runs N/S or E/W.
+    ;; Line lengths from the tip to the opposite side growsn in length by
+    ;; one. There are eight growth possibilities: left and up, left and
+    ;; down, right and up, right and down, up and left, up and right, down
+    ;; and left, down and right.
+    (let [matrix-chars (map #(apply str ; convert number to binary string
+                                    (loop [n %, s ()]
+                                      (if (zero? n)
+                                        s
+                                        (recur (bit-shift-right n 1) (conj s (if (even? n) \0 \1))))))
+                            matrix)
+          width (apply max (map count matrix-chars))
+          height (count matrix)]
+      (letfn [(in-bounds? [row col] (and (>= row 0) (>= col 0) (< row height) (< col width)))
+              (cell [matrix-chars row col]
+                ;; Return char at [row col], or nil if out of bounds
+                (and (in-bounds? row col)
+                     (nth (nth matrix-chars row) col)))
+              (all-mineral? [matrix-chars line-start line-length row-cell-func]
+                ;; Return true if line-length cells starting at [row col]
+                ;; are all minerals.
+                (loop [i line-length, cell-loc line-start]
+                  (let [[row col] cell-loc]
+                    (cond (zero? i) true
+                          (not= \1 (cell matrix-chars row col)) false
+                          :else (recur (dec i) (row-cell-func cell-loc))))))
+              (area-from-num-lines [n line-length-func]
+                ;; Given line number 0-(n-1), line-length-func should return
+                ;; length of line.
+                (apply + (map line-length-func (range n))))
+              (biggest-triangle [matrix-chars row col row-start-func row-cell-func line-length-func]
+                ;; Returns map with keys :start, :gen-funcs, :area, and :num-lines
+                (let [num-lines (loop [num-lines 1]
+                                  (cond (all-mineral? matrix-chars
+                                                      (row-start-func [row col] (dec num-lines))
+                                                      (line-length-func num-lines)
+                                                      row-cell-func)
+                                          (recur (inc num-lines))
+                                        :else num-lines))]
+                {:start [row col]
+                 :gen-funcs [row-start-func row-cell-func line-length-func]
+                 :num-lines num-lines
+                 :area (area-from-num-lines num-lines line-length-func)}))
+              (remove-from-matrix [matrix-chars triangle]
+                ;; Triangle is a map with keys :start, :gen-funcs, :num-lines, and :area
+                (println "remove-from-matrix matrix-chars" matrix-chars) ; DEBUG
+                (let [[row col] (:start triangle)
+                      [row-start-func row-cell-func line-length-func] (:gen-funcs triangle)
+                      num-lines (:num-lines triangle)
+                      rmatrix-chars (ref matrix-chars)
+                      replace-cell (fn [m-chars row col] (assoc m-chars row (assoc (nth m-chars row) col \0)))]
+                  (loop [line 1]
+                    (println "in loop line" line "@rmatrix-chars" @rmatrix-chars) ; DEBUG
+                    (if (> line num-lines)
+                      @rmatrix-chars
+                      (let [[row col] (row-start-func [row col] line)]
+                        (println "let row" row "col" col) ; DEBUG
+                        (loop [i (line-length-func line)
+                               cell-loc [row col]]
+                          (println "loop i" i "cell-loc" cell-loc) ; DEBUG
+                          (cond (zero? i) @rmatrix-chars
+                                :else (let [[row col] cell-loc]
+                                        (dosync
+                                         (println "gonna call ref-set") ; DEBUG
+                                         (ref-set rmatrix-chars (replace-cell @rmatrix-chars row col)))
+                                        (recur (dec i) (row-cell-func cell-loc))))))))))]
+        (loop [matrix-chars matrix-chars, area-so-far 0]
+          (println "matrix-chars" matrix-chars "area-so-far" area-so-far) ; DEBUG
+          (let [ ;; Pairs of functions. First returns starting coord of row
+                 ;; n (0-based). Second returns next coord in row given
+                 ;; previous coord.
+                cardinal-funcs [[(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [r (inc c)])]
+                                [(fn [[r c] n] [(- r n) (- c n)]) (fn [[r c]] [r (inc c)])]
+                                [(fn [[r c] n] [(+ r n) (+ c n)]) (fn [[r c]] [(inc r) c])]
+                                [(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [(inc r) c])]]
+                t45deg-funcs [[(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (dec c)])] ; up left
+                              [(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (inc c)])] ; up right
+                              [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(inc r) c])] ; right up
+                              [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(dec r) c])] ; right down
+                              [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (inc c)])] ; down right
+                              [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (dec c)])] ; down left
+                              [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(dec r) c])] ; left down
+                              [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(inc r) c])]] ; left up
+                all-biggest-triangles (flatten (concat
+                                                (for [row (range height), col (range width)] ; cardinal triangles
+                                                  (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) identity)) cardinal-funcs))
+                                                (for [row (range height), col (range width)] ; 45deg triangles
+                                                  (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) #(inc (* (dec %) 2)))) t45deg-funcs))))
+                biggest-tri (apply max-key :area all-biggest-triangles)
+                biggest-area (:area biggest-tri)]
+            (println "biggest-area" biggest-area) ; DEBUG
+            (if (< biggest-area 3)
+              area-so-far
+              (recur (remove-from-matrix matrix-chars biggest-tri) (+ area-so-far biggest-area))))))))
   )
 
 (and
@@ -2504,42 +2605,43 @@
 ; 1111  ->  **11
 ; 1111      ***1
 ; 1111      ****
- (= 15 (__ [1 3 7 15 31]))
-; 00001      0000*
-; 00011      000**
-; 00111  ->  00***
-; 01111      0****
-; 11111      *****
- (= 3 (__ [3 3]))
-; 11      *1
-; 11  ->  **
- (= 4 (__ [7 3]))
-; 111      ***
-; 011  ->  0*1
- (= 6 (__ [17 22 6 14 22]))
-; 10001      10001
-; 10110      101*0
-; 00110  ->  00**0
-; 01110      0***0
-; 10110      10110
- (= 9 (__ [18 7 14 14 6 3]))
-; 10010      10010
-; 00111      001*0
-; 01110      01**0
-; 01110  ->  0***0
-; 00110      00**0
-; 00011      000*1
- (= nil (__ [21 10 21 10]))
-; 10101      10101
-; 01010      01010
-; 10101  ->  10101
-; 01010      01010
- (= nil (__ [0 31 0 31 0]))
-; 00000      00000
-; 11111      11111
-; 00000  ->  00000
-; 11111      11111
-; 00000      00000 )
+;;  (= 15 (__ [1 3 7 15 31]))
+;; ; 00001      0000*
+;; ; 00011      000**
+;; ; 00111  ->  00***
+;; ; 01111      0****
+;; ; 11111      *****
+;;  (= 3 (__ [3 3]))
+;; ; 11      *1
+;; ; 11  ->  **
+;;  (= 4 (__ [7 3]))
+;; ; 111      ***
+;; ; 011  ->  0*1
+;;  (= 6 (__ [17 22 6 14 22]))
+;; ; 10001      10001
+;; ; 10110      101*0
+;; ; 00110  ->  00**0
+;; ; 01110      0***0
+;; ; 10110      10110
+;;  (= 9 (__ [18 7 14 14 6 3]))
+;; ; 10010      10010
+;; ; 00111      001*0
+;; ; 01110      01**0
+;; ; 01110  ->  0***0
+;; ; 00110      00**0
+;; ; 00011      000*1
+;;  (= nil (__ [21 10 21 10]))
+;; ; 10101      10101
+;; ; 01010      01010
+;; ; 10101  ->  10101
+;; ; 01010      01010
+;;  (= nil (__ [0 31 0 31 0]))
+;; ; 00000      00000
+;; ; 11111      11111
+;; ; 00000  ->  00000
+;; ; 11111      11111
+;; ; 00000      00000
+ )
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/140
