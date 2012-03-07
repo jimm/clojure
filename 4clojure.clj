@@ -2461,12 +2461,14 @@
     ;; one. There are eight growth possibilities: left and up, left and
     ;; down, right and up, right and down, up and left, up and right, down
     ;; and left, down and right.
-    (let [matrix-chars (map #(apply str ; convert number to binary string
-                                    (loop [n %, s ()]
-                                      (if (zero? n)
-                                        s
-                                        (recur (bit-shift-right n 1) (conj s (if (even? n) \0 \1))))))
-                            matrix)
+    ;;
+    ;; Note: all row, col, and line numbers are 0-based.
+    (let [matrix-chars (into [] (map #(apply str ; convert number to binary string
+                                             (loop [n %, s ()]
+                                               (if (zero? n)
+                                                 s
+                                                 (recur (bit-shift-right n 1) (conj s (if (even? n) \0 \1))))))
+                                     matrix))
           width (apply max (map count matrix-chars))
           height (count matrix)]
       (letfn [(in-bounds? [row col] (and (>= row 0) (>= col 0) (< row height) (< col width)))
@@ -2476,7 +2478,9 @@
                      (nth (nth matrix-chars row) col)))
               (all-mineral? [matrix-chars line-start line-length row-cell-func]
                 ;; Return true if line-length cells starting at [row col]
-                ;; are all minerals.
+                ;; are all minerals. Coordinates in the line are calculated
+                ;; by row-cell-func, which takes the previous coord and
+                ;; returns the next one.
                 (loop [i line-length, cell-loc line-start]
                   (let [[row col] cell-loc]
                     (cond (zero? i) true
@@ -2487,11 +2491,14 @@
                 ;; length of line.
                 (apply + (map line-length-func (range n))))
               (biggest-triangle [matrix-chars row col row-start-func row-cell-func line-length-func]
+                ;; row-start-func takes [row col] pair and line number (0-based) and returns row start coord.
+                ;; row-cell-func takes prev cell in line and returns next row in line
+                ;; line-length-func returns length of nth row (0-based)
                 ;; Returns map with keys :start, :gen-funcs, :area, and :num-lines
                 (let [num-lines (loop [num-lines 1]
                                   (cond (all-mineral? matrix-chars
                                                       (row-start-func [row col] (dec num-lines))
-                                                      (line-length-func num-lines)
+                                                      (line-length-func (dec num-lines))
                                                       row-cell-func)
                                           (recur (inc num-lines))
                                         :else num-lines))]
@@ -2500,56 +2507,66 @@
                  :num-lines num-lines
                  :area (area-from-num-lines num-lines line-length-func)}))
               (remove-from-matrix [matrix-chars triangle]
+                ;; Remove triangle from matrix, replacing it with \0 chars
+                (println "remove-from-matrix") ; DEBUG
+                (println "  matrix-chars" matrix-chars) ; DEBUG
+                (println "  triangle" (merge triangle {:gen-funcs nil})) ; DEBUG
+;; FIXME
                 ;; Triangle is a map with keys :start, :gen-funcs, :num-lines, and :area
-                (println "remove-from-matrix matrix-chars" matrix-chars) ; DEBUG
                 (let [[row col] (:start triangle)
                       [row-start-func row-cell-func line-length-func] (:gen-funcs triangle)
                       num-lines (:num-lines triangle)
-                      rmatrix-chars (ref matrix-chars)
-                      replace-cell (fn [m-chars row col] (assoc m-chars row (assoc (nth m-chars row) col \0)))]
+                      r-matrix-chars (ref matrix-chars)
+                      replace-cell (fn [m-chars row col]
+                                     (println "replace-cell m-chars" m-chars "row" row "col" col) ; DEBUG
+                                     ;; Replace char at [row col] with \0
+                                     (let [row-chars (nth m-chars row)
+                                           new-row (str (subs row-chars 0 col) \0 (subs row-chars (inc col)))]
+                                       (assoc m-chars row new-row)))]
                   (loop [line 1]
-                    (println "in loop line" line "@rmatrix-chars" @rmatrix-chars) ; DEBUG
+                    ;; loop over each line
+                    (println "  line" line "num-lines" num-lines) ; DEBUG
                     (if (> line num-lines)
-                      @rmatrix-chars
-                      (let [[row col] (row-start-func [row col] line)]
-                        (println "let row" row "col" col) ; DEBUG
-                        (loop [i (line-length-func line)
-                               cell-loc [row col]]
-                          (println "loop i" i "cell-loc" cell-loc) ; DEBUG
-                          (cond (zero? i) @rmatrix-chars
-                                :else (let [[row col] cell-loc]
-                                        (dosync
-                                         (println "gonna call ref-set") ; DEBUG
-                                         (ref-set rmatrix-chars (replace-cell @rmatrix-chars row col)))
-                                        (recur (dec i) (row-cell-func cell-loc))))))))))]
-        (loop [matrix-chars matrix-chars, area-so-far 0]
-          (println "matrix-chars" matrix-chars "area-so-far" area-so-far) ; DEBUG
-          (let [ ;; Pairs of functions. First returns starting coord of row
-                 ;; n (0-based). Second returns next coord in row given
-                 ;; previous coord.
-                cardinal-funcs [[(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [r (inc c)])]
-                                [(fn [[r c] n] [(- r n) (- c n)]) (fn [[r c]] [r (inc c)])]
-                                [(fn [[r c] n] [(+ r n) (+ c n)]) (fn [[r c]] [(inc r) c])]
-                                [(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [(inc r) c])]]
-                t45deg-funcs [[(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (dec c)])] ; up left
-                              [(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (inc c)])] ; up right
-                              [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(inc r) c])] ; right up
-                              [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(dec r) c])] ; right down
-                              [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (inc c)])] ; down right
-                              [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (dec c)])] ; down left
-                              [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(dec r) c])] ; left down
-                              [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(inc r) c])]] ; left up
-                all-biggest-triangles (flatten (concat
-                                                (for [row (range height), col (range width)] ; cardinal triangles
-                                                  (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) identity)) cardinal-funcs))
-                                                (for [row (range height), col (range width)] ; 45deg triangles
-                                                  (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) #(inc (* (dec %) 2)))) t45deg-funcs))))
-                biggest-tri (apply max-key :area all-biggest-triangles)
-                biggest-area (:area biggest-tri)]
-            (println "biggest-area" biggest-area) ; DEBUG
-            (if (< biggest-area 3)
-              area-so-far
-              (recur (remove-from-matrix matrix-chars biggest-tri) (+ area-so-far biggest-area))))))))
+                      @r-matrix-chars
+                      (recur
+                       (let [[row col] (row-start-func [row col] (dec line))]
+                         (loop [i (line-length-func (dec line))
+                                cell-loc [row col]]
+                           ;; loop over each char in the line
+                           (cond (zero? i) (inc line)
+                                 :else (let [[row col] cell-loc]
+                                         (dosync
+                                          (ref-set r-matrix-chars (replace-cell @r-matrix-chars row col)))
+                                         (recur (dec i) (row-cell-func cell-loc)))))))))))]
+        (let [ ;; Pairs of functions. First returns starting coord of row
+              ;; n (0-based). Second returns next coord in row given
+              ;; previous coord.
+              cardinal-funcs [[(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [r (inc c)])]
+                              [(fn [[r c] n] [(- r n) (- c n)]) (fn [[r c]] [r (inc c)])]
+                              [(fn [[r c] n] [(+ r n) (+ c n)]) (fn [[r c]] [(inc r) c])]
+                              [(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [(inc r) c])]]
+              t45deg-funcs [[(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (dec c)])]  ; up left
+                            [(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (inc c)])]  ; up right
+                            [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(inc r) c])]  ; right up
+                            [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(dec r) c])]  ; right down
+                            [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (inc c)])]  ; down right
+                            [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (dec c)])]  ; down left
+                            [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(dec r) c])]  ; left down
+                            [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(inc r) c])]]] ; left up
+          (loop [matrix-chars matrix-chars, area-so-far 0]
+            (println "matrix-chars" matrix-chars) ; DEBUG
+            (let [all-biggest-triangles (flatten (concat
+                                                  (for [row (range height), col (range width)] ; cardinal triangles
+                                                    (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) #(inc (* (dec %) 2))))
+                                                         cardinal-funcs))
+                                                  (for [row (range height), col (range width)] ; 45deg triangles
+                                                    (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) inc))
+                                                         t45deg-funcs))))
+                  biggest-tri (apply max-key :area all-biggest-triangles)
+                  biggest-area (:area biggest-tri)]
+              (if (< biggest-area 3)
+                area-so-far
+                (recur (remove-from-matrix matrix-chars biggest-tri) (+ area-so-far biggest-area)))))))))
   )
 
 (and
