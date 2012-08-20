@@ -2431,6 +2431,103 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/157
+
+(def __
+     (fn [coll]
+       (map #(list %1 %2) coll (range))))
+
+(and
+ (= (__ [:a :b :c]) [[:a 0] [:b 1] [:c 2]])
+ (= (__ [0 1 3]) '((0 0) (1 1) (3 2)))
+ (= (__ [[:foo] {:bar :baz}]) [[[:foo] 0] [{:bar :baz} 1]]))
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/162
+
+(def __ 1)
+
+(and
+ (= __ (if-not false 1 0))
+ (= __ (if-not nil 1 0))
+ (= __ (if true 1 0))
+ (= __ (if [] 1 0))
+ (= __ (if [0] 1 0))
+ (= __ (if 0 1 0))
+ (= __ (if 1 1 0))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/161
+
+;; Set A is a subset of set B, or equivalently B is a superset of A, if A is
+;; "contained" inside B. A and B may coincide.
+
+(def __ #{1 2})
+
+(and
+ (clojure.set/superset? __ #{2})
+ (clojure.set/subset? #{1} __)
+ (clojure.set/superset? __ #{1 2})
+ (clojure.set/subset? #{1 2} __)
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/156
+
+;; When retrieving values from a map, you can specify default values in case
+;; the key is not found:
+;;
+;; (= 2 (:foo {:bar 0, :baz 1} 2))
+;;
+;; However, what if you want the map itself to contain the default values?
+;; Write a function which takes a default value and a sequence of keys and
+;; constructs a map.
+
+(def __
+  (fn [default keys]
+    (apply hash-map (mapcat #(list %1 %2) keys (repeat default)))
+    )
+  )
+
+(and
+ (= (__ 0 [:a :b :c]) {:a 0 :b 0 :c 0})
+ (= (__ "x" [1 2 3]) {1 "x" 2 "x" 3 "x"})
+ (= (__ [:a :b] [:foo :bar]) {:foo [:a :b] :bar [:a :b]})
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/166
+
+;; For any orderable data type it's possible to derive all of the basic
+;; comparison operations (<, ≤, =, ≠, ≥, and >) from a single operation (any
+;; operator but = or ≠ will work). Write a function that takes three
+;; arguments, a less than operator for the data and two items to compare.
+;; The function should return a keyword describing the relationship between
+;; the two items. The keywords for the relationship between x and y are as
+;; follows:
+;;
+;; x = y -> :eq
+;; x > y -> :gt
+;; x < y -> :lt
+
+
+(def __
+     (fn [lt_op x y]
+       (cond (lt_op x y) :lt
+             (lt_op y x) :gt
+             :else :eq)
+    )
+  )
+
+(and
+ (= :gt (__ < 5 1))
+ (= :eq (__ (fn [x y] (< (count x) (count y))) "pear" "plum"))
+ (= :lt (__ (fn [x y] (< (mod x 5) (mod y 5))) 21 3))
+ (= :gt (__ > 0 2))
+ )
+
+;;; ****************************************************************
 ;;; Solved, not yet submitted
 ;;; ****************************************************************
 
@@ -2780,3 +2877,345 @@ symbles are in the alphabet #{'a, 'A, 'b, 'B, ...}."
          #{'A 'b 'C 'd}})
    #{#{'B 'D}
      #{'b 'd}}) )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/153
+
+;; Given a set of sets, create a function which returns true if no two of
+;; those sets have any elements in common(1) and false otherwise. Some of
+;; the test cases are a bit tricky, so pay a little more attention to them.
+;;
+;; (1) Such sets are usually called pairwise disjoint or mutually disjoint.
+
+(def __
+  (fn [s]
+    (
+    )
+  )
+
+(and
+ (= (__ #{#{\U} #{\s} #{\e \R \E} #{\P \L} #{\.}})
+    true)
+ (= (__ #{#{:a :b :c :d :e}
+          #{:a :b :c :d}
+          #{:a :b :c}
+          #{:a :b}
+          #{:a}})
+    false)
+ (= (__ #{#{[1 2 3] [4 5]}
+          #{[1 2] [3 4 5]}
+          #{[1] [2] 3 4 5}
+          #{1 2 [3 4] [5]}})
+    true)
+ (= (__ #{#{'a 'b}
+          #{'c 'd 'e}
+          #{'f 'g 'h 'i}
+          #{''a ''c ''f}})
+    true)
+ (= (__ #{#{'(:x :y :z) '(:x :y) '(:z) '()}
+          #{#{:x :y :z} #{:x :y} #{:z} #{}}
+          #{'[:x :y :z] [:x :y] [:z] [] {}}})
+    false)
+ (= (__ #{#{(= "true") false}
+          #{:yes :no}
+          #{(class 1) 0}
+          #{(symbol "true") 'false}
+          #{(keyword "yes") ::no}
+          #{(class '1) (int \0)}})
+    false)
+ (= (__ #{#{distinct?}
+          #{#(-> %) #(-> %)}
+          #{#(-> %) #(-> %) #(-> %)}
+          #{#(-> %) #(-> %) #(-> %)}})
+    true)
+ (= (__ #{#{(#(-> *)) + (quote mapcat) #_ nil}
+          #{'+ '* mapcat (comment mapcat)}
+          #{(do) set contains? nil?}
+          #{, , , #_, , empty?}})
+    false)
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/158
+
+;; Write a function that accepts a curried function of unknown arity n.
+;; Return an equivalent function of n arguments.
+;; 
+;; You may wish to read http://en.wikipedia.org/wiki/Currying
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ (= 10 ((__ (fn [a]
+              (fn [b]
+                (fn [c]
+                  (fn [d]
+                    (+ a b c d))))))
+        1 2 3 4))
+ (= 24 ((__ (fn [a]
+              (fn [b]
+                (fn [c]
+                  (fn [d]
+                    (* a b c d))))))
+        1 2 3 4))
+ (= 25 ((__ (fn [a]
+              (fn [b]
+                (* a b))))
+        5 5))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/168
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ (= (take 5 (map #(take 6 %) (__ str)))
+    [["00" "01" "02" "03" "04" "05"]
+     ["10" "11" "12" "13" "14" "15"]
+     ["20" "21" "22" "23" "24" "25"]
+     ["30" "31" "32" "33" "34" "35"]
+     ["40" "41" "42" "43" "44" "45"]])
+ (= (take 6 (map #(take 5 %) (__ str 3 2)))
+    [["32" "33" "34" "35" "36"]
+     ["42" "43" "44" "45" "46"]
+     ["52" "53" "54" "55" "56"]
+     ["62" "63" "64" "65" "66"]
+     ["72" "73" "74" "75" "76"]
+     ["82" "83" "84" "85" "86"]])
+ (= (__ * 3 5 5 7)
+    [[15 18 21 24 27 30 33]
+     [20 24 28 32 36 40 44]
+     [25 30 35 40 45 50 55]
+     [30 36 42 48 54 60 66]
+     [35 42 49 56 63 70 77]])
+ (= (__ #(/ % (inc %2)) 1 0 6 4)
+    [[1/1 1/2 1/3 1/4]
+     [2/1 2/2 2/3 1/2]
+     [3/1 3/2 3/3 3/4]
+     [4/1 4/2 4/3 4/4]
+     [5/1 5/2 5/3 5/4]
+     [6/1 6/2 6/3 6/4]])
+ (= (class (__ (juxt bit-or bit-xor)))
+    (class (__ (juxt quot mod) 13 21))
+    (class (lazy-seq)))
+ (= (class (nth (__ (constantly 10946)) 34))
+    (class (nth (__ (constantly 0) 5 8) 55))
+    (class (lazy-seq)))
+ (= (let [m 377 n 610 w 987
+          check (fn [f s] (every? true? (map-indexed f s)))
+          row (take w (nth (__ vector) m))
+          column (take w (map first (__ vector m n)))
+          diagonal (map-indexed #(nth %2 %) (__ vector m n w w))]
+      (and (check #(= %2 [m %]) row)
+           (check #(= %2 [(+ m %) n]) column)
+           (check #(= %2 [(+ m %) (+ n %)]) diagonal)))
+    true)
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/164
+
+;; A deterministic finite automaton (DFA)
+;; (http://en.wikipedia.org/wiki/Deterministic_finite_automaton) is an
+;; abstract machine that recognizes a regular language
+;; (http://en.wikipedia.org/wiki/Regular_language). Usually a DFA is defined
+;; by a 5-tuple, but instead we'll use a map with 5 keys:
+;; 
+;; :states is the set of states for the DFA.
+;; :alphabet is the set of symbols included in the language recognized by the DFA.
+;; :start is the start state of the DFA.
+;; :accepts is the set of accept states in the DFA.
+;; :transitions is the transition function for the DFA, mapping :states X :alphabet onto :states.
+;;
+;; Write a function that takes as input a DFA definition (as described
+;; above) and returns a sequence enumerating all strings in the language
+;; recognized by the DFA. Note: Although the DFA itself is finite and only
+;; recognizes finite-length strings it can still recognize an infinite set
+;; of finite-length strings. And because stack space is finite, make sure
+;; you don't get stuck in an infinite loop that's not producing results
+;; every so often!
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ (= #{"a" "ab" "abc"}
+    (set (__ '{:states #{q0 q1 q2 q3}
+               :alphabet #{a b c}
+               :start q0
+               :accepts #{q1 q2 q3}
+               :transitions {q0 {a q1}
+                             q1 {b q2}
+                             q2 {c q3}}})))
+ (= #{"hi" "hey" "hello"}
+    (set (__ '{:states #{q0 q1 q2 q3 q4 q5 q6 q7}
+               :alphabet #{e h i l o y}
+               :start q0
+               :accepts #{q2 q4 q7}
+               :transitions {q0 {h q1}
+                             q1 {i q2, e q3}
+                             q3 {l q5, y q4}
+                             q5 {l q6}
+                             q6 {o q7}}})))
+ (= (set (let [ss "vwxyz"] (for [i ss, j ss, k ss, l ss] (str i j k l))))
+    (set (__ '{:states #{q0 q1 q2 q3 q4}
+               :alphabet #{v w x y z}
+               :start q0
+               :accepts #{q4}
+               :transitions {q0 {v q1, w q1, x q1, y q1, z q1}
+                             q1 {v q2, w q2, x q2, y q2, z q2}
+                             q2 {v q3, w q3, x q3, y q3, z q3}
+                             q3 {v q4, w q4, x q4, y q4, z q4}}})))
+ (let [res (take 2000 (__ '{:states #{q0 q1}
+                            :alphabet #{0 1}
+                            :start q0
+                            :accepts #{q0}
+                            :transitions {q0 {0 q0, 1 q1}
+                                          q1 {0 q1, 1 q0}}}))]
+   (and (every? (partial re-matches #"0*(?:10*10*)*") res)
+        (= res (distinct res))))
+ (let [res (take 2000 (__ '{:states #{q0 q1}
+                            :alphabet #{n m}
+                            :start q0
+                            :accepts #{q1}
+                            :transitions {q0 {n q0, m q1}}}))]
+   (and (every? (partial re-matches #"n*m") res)
+        (= res (distinct res))))
+ (let [res (take 2000 (__ '{:states #{q0 q1 q2 q3 q4 q5 q6 q7 q8 q9}
+                            :alphabet #{i l o m p t}
+                            :start q0
+                            :accepts #{q5 q8}
+                            :transitions {q0 {l q1}
+                                          q1 {i q2, o q6}
+                                          q2 {m q3}
+                                          q3 {i q4}
+                                          q4 {t q5}
+                                          q6 {o q7}
+                                          q7 {p q8}
+                                          q8 {l q9}
+                                          q9 {o q6}}}))]
+   (and (every? (partial re-matches #"limit|(?:loop)+") res)
+        (= res (distinct res))))
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/152
+
+;; A Latin square of order n is an n x n array that contains n different
+;; elements, each occurring exactly once in each row, and exactly once in
+;; each column. For example, among the following arrays only the first one
+;; forms a Latin square:
+;;
+;; A B C    A B C    A B C
+;; B C A    B C A    B D A
+;; C A B    C A C    C A B
+;;
+;; Let V be a vector of such vectors1 that they may differ in length2. We
+;; will say that an arrangement of vectors of V in consecutive rows is an
+;; alignment (of vectors) of V if the following conditions are satisfied:
+
+;; All vectors of V are used.
+;; Each row contains just one vector.
+;; The order of V is preserved.
+;; All vectors of maximal length are horizontally aligned each other.
+;; If a vector is not of maximal length then all its elements are aligned
+;;   with elements of some subvector of a vector of maximal length.
+;;
+;; Let L denote a Latin square of order 2 or greater. We will say that L is
+;; included in V or that V includes L iff there exists an alignment of V
+;; such that contains a subsquare that is equal to L. For example, if V
+;; equals [[1 2 3][2 3 1 2 1][3 1 2]] then there are nine alignments of V
+;; (brackets omitted):
+;;
+;; 
+;;        1              2              3
+;;
+;;      1 2 3          1 2 3          1 2 3
+;;  A   2 3 1 2 1    2 3 1 2 1    2 3 1 2 1
+;;      3 1 2        3 1 2        3 1 2
+;;
+;;      1 2 3          1 2 3          1 2 3
+;;  B   2 3 1 2 1    2 3 1 2 1    2 3 1 2 1
+;;        3 1 2        3 1 2        3 1 2
+;;
+;;      1 2 3          1 2 3          1 2 3
+;;  C   2 3 1 2 1    2 3 1 2 1    2 3 1 2 1
+;;          3 1 2        3 1 2        3 1 2
+;;
+;; Alignment A1 contains Latin square [[1 2 3][2 3 1][3 1 2]], alignments
+;; A2, A3, B1, B2, B3 contain no Latin squares, and alignments C1, C2, C3
+;; contain [[2 1][1 2]]. Thus in this case V includes one Latin square of
+;; order 3 and one of order 2 which is included three times.
+;;
+;; Our aim is to implement a function which accepts a vector of vectors V as
+;; an argument, and returns a map which keys and values are integers. Each
+;; key should be the order of a Latin square included in V, and its value a
+;; count of different Latin squares of that order included in V. If V does
+;; not include any Latin squares an empty map should be returned. In the
+;; previous example the correct output of such a function is {3 1, 2 1} and
+;; not {3 1, 2 3}.
+;;
+;; 1 Of course, we can consider sequences instead of vectors. 
+;; 2 Length of a vector is the number of elements in the vector.
+
+
+(def __
+  (fn [s]
+    )
+  )
+
+(and
+ (= (__ '[[A B C D]
+          [A C D B]
+          [B A D C]
+          [D C A B]])
+    {})
+ (= (__ '[[A B C D E F]
+          [B C D E F A]
+          [C D E F A B]
+          [D E F A B C]
+          [E F A B C D]
+          [F A B C D E]])
+    {6 1})
+ (= (__ '[[A B C D]
+          [B A D C]
+          [D C B A]
+          [C D A B]])
+    {4 1, 2 4})
+ (= (__ '[[B D A C B]
+          [D A B C A]
+          [A B C A B]
+          [B C A B C]
+          [A D B C A]])
+    {3 3})
+ (= (__ [  [2 4 6 3]
+           [3 4 6 2]
+           [6 2 4]  ])
+    {})
+ (= (__ [[1]
+         [1 2 1 2]
+         [2 1 2 1]
+         [1 2 1 2]
+         []       ])
+    {2 2})
+ (= (__ [[3 1 2]
+         [1 2 3 1 3 4]
+         [2 3 1 3]    ])
+    {3 1, 2 2})
+ (= (__ [[8 6 7 3 2 5 1 4]
+         [6 8 3 7]
+         [7 3 8 6]
+         [3 7 6 8 1 4 5 2]
+         [1 8 5 2 4]
+         [8 1 2 4 5]])
+    {4 1, 3 1, 2 7})
+ )
