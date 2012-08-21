@@ -2528,6 +2528,96 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/153
+
+;; Given a set of sets, create a function which returns true if no two of
+;; those sets have any elements in common(1) and false otherwise. Some of
+;; the test cases are a bit tricky, so pay a little more attention to them.
+;;
+;; (1) Such sets are usually called pairwise disjoint or mutually disjoint.
+
+(def __
+  (fn [coll]
+    (zero? (count (filter #(> % 1) (vals (frequencies (reduce concat coll))))))
+    )
+  )
+
+(and
+ (= (__ #{#{\U} #{\s} #{\e \R \E} #{\P \L} #{\.}})
+    true)
+ (= (__ #{#{:a :b :c :d :e}
+          #{:a :b :c :d}
+          #{:a :b :c}
+          #{:a :b}
+          #{:a}})
+    false)
+ (= (__ #{#{[1 2 3] [4 5]}
+          #{[1 2] [3 4 5]}
+          #{[1] [2] 3 4 5}
+          #{1 2 [3 4] [5]}})
+    true)
+ (= (__ #{#{'a 'b}
+          #{'c 'd 'e}
+          #{'f 'g 'h 'i}
+          #{''a ''c ''f}})
+    true)
+ (= (__ #{#{'(:x :y :z) '(:x :y) '(:z) '()}
+          #{#{:x :y :z} #{:x :y} #{:z} #{}}
+          #{'[:x :y :z] [:x :y] [:z] [] {}}})
+    false)
+ (= (__ #{#{(= "true") false}
+          #{:yes :no}
+          #{(class 1) 0}
+          #{(symbol "true") 'false}
+          #{(keyword "yes") ::no}
+          #{(class '1) (int \0)}})
+    false)
+ (= (__ #{#{distinct?}
+          #{#(-> %) #(-> %)}
+          #{#(-> %) #(-> %) #(-> %)}
+          #{#(-> %) #(-> %) #(-> %)}})
+    true)
+ (= (__ #{#{(#(-> *)) + (quote mapcat) #_ nil}
+          #{'+ '* mapcat (comment mapcat)}
+          #{(do) set contains? nil?}
+          #{, , , #_, , empty?}})
+    false)
+ )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/158
+
+;; Write a function that accepts a curried function of unknown arity n.
+;; Return an equivalent function of n arguments.
+;; 
+;; You may wish to read http://en.wikipedia.org/wiki/Currying
+
+(def __
+  (fn [f]
+    (fn [& args] (reduce #(%1 %2) f args))
+    )
+  )
+
+(and
+ (= 10 ((__ (fn [a]
+              (fn [b]
+                (fn [c]
+                  (fn [d]
+                    (+ a b c d))))))
+        1 2 3 4))
+ (= 24 ((__ (fn [a]
+              (fn [b]
+                (fn [c]
+                  (fn [d]
+                    (* a b c d))))))
+        1 2 3 4))
+ (= 25 ((__ (fn [a]
+              (fn [b]
+                (* a b))))
+        5 5))
+ )
+
+;;; ****************************************************************
 ;;; Solved, not yet submitted
 ;;; ****************************************************************
 
@@ -2774,7 +2864,7 @@
 (defn func-input-value [s]
   "Given a set of input symbols, return the single value that corresponds to
 1 bits where symbols are true and 0 bits where symbols are false. Assumes
-symbles are in the alphabet #{'a, 'A, 'b, 'B, ...}."
+symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
   (let [num-bits (count s)]
     (reduce + (map #(sym-to-power-of-2 % num-bits) s))))
 
@@ -2879,99 +2969,35 @@ symbles are in the alphabet #{'a, 'A, 'b, 'B, ...}."
      #{'b 'd}}) )
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/153
-
-;; Given a set of sets, create a function which returns true if no two of
-;; those sets have any elements in common(1) and false otherwise. Some of
-;; the test cases are a bit tricky, so pay a little more attention to them.
-;;
-;; (1) Such sets are usually called pairwise disjoint or mutually disjoint.
-
-(def __
-  (fn [s]
-    (
-    )
-  )
-
-(and
- (= (__ #{#{\U} #{\s} #{\e \R \E} #{\P \L} #{\.}})
-    true)
- (= (__ #{#{:a :b :c :d :e}
-          #{:a :b :c :d}
-          #{:a :b :c}
-          #{:a :b}
-          #{:a}})
-    false)
- (= (__ #{#{[1 2 3] [4 5]}
-          #{[1 2] [3 4 5]}
-          #{[1] [2] 3 4 5}
-          #{1 2 [3 4] [5]}})
-    true)
- (= (__ #{#{'a 'b}
-          #{'c 'd 'e}
-          #{'f 'g 'h 'i}
-          #{''a ''c ''f}})
-    true)
- (= (__ #{#{'(:x :y :z) '(:x :y) '(:z) '()}
-          #{#{:x :y :z} #{:x :y} #{:z} #{}}
-          #{'[:x :y :z] [:x :y] [:z] [] {}}})
-    false)
- (= (__ #{#{(= "true") false}
-          #{:yes :no}
-          #{(class 1) 0}
-          #{(symbol "true") 'false}
-          #{(keyword "yes") ::no}
-          #{(class '1) (int \0)}})
-    false)
- (= (__ #{#{distinct?}
-          #{#(-> %) #(-> %)}
-          #{#(-> %) #(-> %) #(-> %)}
-          #{#(-> %) #(-> %) #(-> %)}})
-    true)
- (= (__ #{#{(#(-> *)) + (quote mapcat) #_ nil}
-          #{'+ '* mapcat (comment mapcat)}
-          #{(do) set contains? nil?}
-          #{, , , #_, , empty?}})
-    false)
- )
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/158
-
-;; Write a function that accepts a curried function of unknown arity n.
-;; Return an equivalent function of n arguments.
-;; 
-;; You may wish to read http://en.wikipedia.org/wiki/Currying
-
-(def __
-  (fn [s]
-    )
-  )
-
-(and
- (= 10 ((__ (fn [a]
-              (fn [b]
-                (fn [c]
-                  (fn [d]
-                    (+ a b c d))))))
-        1 2 3 4))
- (= 24 ((__ (fn [a]
-              (fn [b]
-                (fn [c]
-                  (fn [d]
-                    (* a b c d))))))
-        1 2 3 4))
- (= 25 ((__ (fn [a]
-              (fn [b]
-                (* a b))))
-        5 5))
- )
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/168
 
+;; In mathematics, the function f can be interpreted as an infinite matrix
+;; with infinitely many rows and columns that, when written, looks like an
+;; ordinary matrix but its rows and columns cannot be written down
+;; completely, so are terminated with ellipses. In Clojure, such infinite
+;; matrix can be represented as an infinite lazy sequence of infinite lazy
+;; sequences, where the inner sequences represent rows.
+;;
+;; Write a function that accepts 1, 3 and 5 arguments
+;;
+;; * with the argument f, it returns the infinite matrix A that has the
+;;   entry in the i-th row and the j-th column equal to f(i,j) for i,j =
+;;   0,1,2,...;
+;;
+;; * with the arguments f, m, n, it returns the infinite matrix B that
+;;   equals the remainder of the matrix A after the removal of the first m
+;;   rows and the first n columns;
+;;
+;; * with the arguments f, m, n, s, t, it returns the finite s-by-t matrix
+;;   that consists of the first t entries of each of the first s rows of the
+;;   matrix B or, equivalently, that consists of the first s entries of each
+;;   of the first t columns of the matrix B.
+
 (def __
-  (fn [s]
+  (fn
+    ([f] ...)
+    ([f m n] ...)
+    ([f m n s t] ...)
     )
   )
 
