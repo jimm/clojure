@@ -1,5 +1,4 @@
 Experimentation with Clojure.
 
-bin/clj is a REPL startup script.
-
-See also http://github.com/jimm/euler.
+bin/clj is a REPL startup script (though I use
+https://github.com/technomancy/leiningen/ these days).

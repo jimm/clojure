@@ -2618,6 +2618,98 @@
  )
 
 ;;; ****************************************************************
+;;; http://www.4clojure.com/problem/168
+
+;; In mathematics, the function f can be interpreted as an infinite matrix
+;; with infinitely many rows and columns that, when written, looks like an
+;; ordinary matrix but its rows and columns cannot be written down
+;; completely, so are terminated with ellipses. In Clojure, such infinite
+;; matrix can be represented as an infinite lazy sequence of infinite lazy
+;; sequences, where the inner sequences represent rows.
+;;
+;; Write a function that accepts 1, 3 and 5 arguments
+;;
+;; * with the argument f, it returns the infinite matrix A that has the
+;;   entry in the i-th row and the j-th column equal to f(i,j) for i,j =
+;;   0,1,2,...;
+;;
+;; * with the arguments f, m, n, it returns the infinite matrix B that
+;;   equals the remainder of the matrix A after the removal of the first m
+;;   rows and the first n columns;
+;;
+;; * with the arguments f, m, n, s, t, it returns the finite s-by-t matrix
+;;   that consists of the first t entries of each of the first s rows of the
+;;   matrix B or, equivalently, that consists of the first s entries of each
+;;   of the first t columns of the matrix B.
+;;
+;; NOTE: may not use for, range, iterate, repeat, cycle, drop
+
+;; TODO iterate is bad
+
+(def __
+  (fn inf-matrix
+    ([f] (inf-matrix f 0 0))
+    ([f m n] (inf-matrix f m n nil nil)) ; i,j == f(i+m, j+n)
+    ([f m n s t]                    ; i,j == f(i+m, j+n), finite size (s, t)
+       ;; This is probably cheating...
+       (letfn [(my-iterate [f x] (cons x (lazy-seq (my-iterate f (f x)))))]
+         (let [matrix (map
+                       (fn [row-index]
+                         (let [row (map #(f (+ row-index m) (+ % n)) (my-iterate inc 0))]
+                           (if t
+                             (take t row)
+                             row)))
+                       (my-iterate inc 0))]
+           (if s
+             (take s matrix)
+             matrix)))))
+  )
+
+(and
+ (= (take 5 (map #(take 6 %) (__ str)))
+    [["00" "01" "02" "03" "04" "05"]
+     ["10" "11" "12" "13" "14" "15"]
+     ["20" "21" "22" "23" "24" "25"]
+     ["30" "31" "32" "33" "34" "35"]
+     ["40" "41" "42" "43" "44" "45"]])
+ (= (take 6 (map #(take 5 %) (__ str 3 2)))
+    [["32" "33" "34" "35" "36"]
+     ["42" "43" "44" "45" "46"]
+     ["52" "53" "54" "55" "56"]
+     ["62" "63" "64" "65" "66"]
+     ["72" "73" "74" "75" "76"]
+     ["82" "83" "84" "85" "86"]])
+ (= (__ * 3 5 5 7)
+    [[15 18 21 24 27 30 33]
+     [20 24 28 32 36 40 44]
+     [25 30 35 40 45 50 55]
+     [30 36 42 48 54 60 66]
+     [35 42 49 56 63 70 77]])
+ (= (__ #(/ % (inc %2)) 1 0 6 4)
+    [[1/1 1/2 1/3 1/4]
+     [2/1 2/2 2/3 1/2]
+     [3/1 3/2 3/3 3/4]
+     [4/1 4/2 4/3 4/4]
+     [5/1 5/2 5/3 5/4]
+     [6/1 6/2 6/3 6/4]])
+ (= (class (__ (juxt bit-or bit-xor)))
+    (class (__ (juxt quot mod) 13 21))
+    (class (lazy-seq)))
+ (= (class (nth (__ (constantly 10946)) 34))
+    (class (nth (__ (constantly 0) 5 8) 55))
+    (class (lazy-seq)))
+ (= (let [m 377 n 610 w 987
+          check (fn [f s] (every? true? (map-indexed f s)))
+          row (take w (nth (__ vector) m))
+          column (take w (map first (__ vector m n)))
+          diagonal (map-indexed #(nth %2 %) (__ vector m n w w))]
+      (and (check #(= %2 [m %]) row)
+           (check #(= %2 [(+ m %) n]) column)
+           (check #(= %2 [(+ m %) (+ n %)]) diagonal)))
+    true)
+ )
+
+;;; ****************************************************************
 ;;; Solved, not yet submitted
 ;;; ****************************************************************
 
@@ -2969,83 +3061,6 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
      #{'b 'd}}) )
 
 ;;; ****************************************************************
-;;; http://www.4clojure.com/problem/168
-
-;; In mathematics, the function f can be interpreted as an infinite matrix
-;; with infinitely many rows and columns that, when written, looks like an
-;; ordinary matrix but its rows and columns cannot be written down
-;; completely, so are terminated with ellipses. In Clojure, such infinite
-;; matrix can be represented as an infinite lazy sequence of infinite lazy
-;; sequences, where the inner sequences represent rows.
-;;
-;; Write a function that accepts 1, 3 and 5 arguments
-;;
-;; * with the argument f, it returns the infinite matrix A that has the
-;;   entry in the i-th row and the j-th column equal to f(i,j) for i,j =
-;;   0,1,2,...;
-;;
-;; * with the arguments f, m, n, it returns the infinite matrix B that
-;;   equals the remainder of the matrix A after the removal of the first m
-;;   rows and the first n columns;
-;;
-;; * with the arguments f, m, n, s, t, it returns the finite s-by-t matrix
-;;   that consists of the first t entries of each of the first s rows of the
-;;   matrix B or, equivalently, that consists of the first s entries of each
-;;   of the first t columns of the matrix B.
-
-(def __
-  (fn
-    ([f] ...)
-    ([f m n] ...)
-    ([f m n s t] ...)
-    )
-  )
-
-(and
- (= (take 5 (map #(take 6 %) (__ str)))
-    [["00" "01" "02" "03" "04" "05"]
-     ["10" "11" "12" "13" "14" "15"]
-     ["20" "21" "22" "23" "24" "25"]
-     ["30" "31" "32" "33" "34" "35"]
-     ["40" "41" "42" "43" "44" "45"]])
- (= (take 6 (map #(take 5 %) (__ str 3 2)))
-    [["32" "33" "34" "35" "36"]
-     ["42" "43" "44" "45" "46"]
-     ["52" "53" "54" "55" "56"]
-     ["62" "63" "64" "65" "66"]
-     ["72" "73" "74" "75" "76"]
-     ["82" "83" "84" "85" "86"]])
- (= (__ * 3 5 5 7)
-    [[15 18 21 24 27 30 33]
-     [20 24 28 32 36 40 44]
-     [25 30 35 40 45 50 55]
-     [30 36 42 48 54 60 66]
-     [35 42 49 56 63 70 77]])
- (= (__ #(/ % (inc %2)) 1 0 6 4)
-    [[1/1 1/2 1/3 1/4]
-     [2/1 2/2 2/3 1/2]
-     [3/1 3/2 3/3 3/4]
-     [4/1 4/2 4/3 4/4]
-     [5/1 5/2 5/3 5/4]
-     [6/1 6/2 6/3 6/4]])
- (= (class (__ (juxt bit-or bit-xor)))
-    (class (__ (juxt quot mod) 13 21))
-    (class (lazy-seq)))
- (= (class (nth (__ (constantly 10946)) 34))
-    (class (nth (__ (constantly 0) 5 8) 55))
-    (class (lazy-seq)))
- (= (let [m 377 n 610 w 987
-          check (fn [f s] (every? true? (map-indexed f s)))
-          row (take w (nth (__ vector) m))
-          column (take w (map first (__ vector m n)))
-          diagonal (map-indexed #(nth %2 %) (__ vector m n w w))]
-      (and (check #(= %2 [m %]) row)
-           (check #(= %2 [(+ m %) n]) column)
-           (check #(= %2 [(+ m %) (+ n %)]) diagonal)))
-    true)
- )
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/164
 
 ;; A deterministic finite automaton (DFA)
@@ -3070,8 +3085,8 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 
 (def __
   (fn [s]
-    )
   )
+)
 
 (and
  (= #{"a" "ab" "abc"}
@@ -3145,8 +3160,8 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; B C A    B C A    B D A
 ;; C A B    C A C    C A B
 ;;
-;; Let V be a vector of such vectors1 that they may differ in length2. We
-;; will say that an arrangement of vectors of V in consecutive rows is an
+;; Let V be a vector of such vectors(1) that they may differ in length(2).
+;; We will say that an arrangement of vectors of V in consecutive rows is an
 ;; alignment (of vectors) of V if the following conditions are satisfied:
 
 ;; All vectors of V are used.
@@ -3190,12 +3205,15 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; previous example the correct output of such a function is {3 1, 2 1} and
 ;; not {3 1, 2 3}.
 ;;
-;; 1 Of course, we can consider sequences instead of vectors. 
-;; 2 Length of a vector is the number of elements in the vector.
+;; (1) Of course, we can consider sequences instead of vectors. 
+;; (2) Length of a vector is the number of elements in the vector.
 
 
 (def __
-  (fn [s]
+     (fn [v]
+       (let [minlen (apply min (map count v))
+             maxlen (apply max (map count v))]
+         )
     )
   )
 
