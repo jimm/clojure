@@ -3084,7 +3084,20 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; every so often!
 
 (def __
-  (fn [s]
+  (fn [dfa]
+    (let [accepted (ref #{})]
+      (letfn [(accepted? [s] (some #{s} (:accepts dfa)))
+              (transation-for [curr-state 
+              (can-transition? [s curr-state] (get (get (:transitions dfa) curr-state) s))
+              (build-accepted [prefix state]
+                              (for [s (:alphabet dfa)
+                                    :let [new-s (str prefix s)]]
+                                (cond (accepted? new-s) (dosync (commute accepted conj s))
+                                      (can-transition? s curr-state) (????????)
+                                      :else nil)))]
+        (flatten
+         (for [s alphabet] (build-accepted "" (:start dfa)))
+        ))))
   )
 )
 
