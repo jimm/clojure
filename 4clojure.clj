@@ -3086,19 +3086,21 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 (def __
   (fn [dfa]
     (let [accepted (ref #{})]
-      (letfn [(accepted? [s] (some #{s} (:accepts dfa)))
-              (transation-for [curr-state 
-              (can-transition? [s curr-state] (get (get (:transitions dfa) curr-state) s))
-              (build-accepted [prefix state]
-                              (for [s (:alphabet dfa)
-                                    :let [new-s (str prefix s)]]
-                                (cond (accepted? new-s) (dosync (commute accepted conj s))
-                                      (can-transition? s curr-state) (????????)
-                                      :else nil)))]
-        (flatten
-         (for [s alphabet] (build-accepted "" (:start dfa)))
-        ))))
-  )
+      (letfn [(accepted?
+               [state]
+               (some #{state} (:accepts dfa)))
+              (next-state
+               [sym curr-state]
+               (get (get (:transitions dfa) curr-state) sym))
+              (build-accepted
+               [prefix state]
+               (for [s (:alphabet dfa)
+                     :let [new-s (str prefix s)
+                           new-state (next-state s state)]]
+                 (cond (accepted? new-state) (lazy-seq (conj (build-accepted new-s new-state) new-s))
+                       new-state (lazy-seq (build-accepted new-s new-state))
+                       :else nil)))]
+        (filter identity (flatten (build-accepted "" (:start dfa)))))))
 )
 
 (and
