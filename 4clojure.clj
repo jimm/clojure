@@ -3160,7 +3160,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
  (= #{"a" "ab" "abc"}
     (set (__ dfa1)))
  (= #{"hi" "hey" "hello"}
-    (set (__ dfa2)))N
+    (set (__ dfa2)))
  (= (set (let [ss "vwxyz"] (for [i ss, j ss, k ss, l ss] (str i j k l))))
     (set (__ dfa3)))
  (let [res (take 2000 (__ dfa4))]
