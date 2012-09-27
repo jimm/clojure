@@ -3083,29 +3083,39 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; you don't get stuck in an infinite loop that's not producing results
 ;; every so often!
 
+;;; Correct, but blows stack.
 (def __
-  (fn [dfa]
-    (let [accepted (ref #{})]
-      (letfn [(accepted?
-               [state]
-               (some #{state} (:accepts dfa)))
-              (next-state
-               [sym curr-state]
-               (get (get (:transitions dfa) curr-state) sym))
-              (build-accepted
-               [prefix state]
-               (for [s (shuffle (:alphabet dfa))
-                     :let [new-s (str prefix s)
-                           new-state (next-state s state)]]
-                 (cond (accepted? new-state) (lazy-seq (conj (build-accepted new-s new-state) new-s))
-                       new-state (lazy-seq (build-accepted new-s new-state))
-                       :else nil)))
-              (generate-accepted
-               []
-               (dosync (ref-set accepted #{}))
-               (build-accepted "" (:start dfa)))]
-        (filter identity (flatten (build-accepted "" (:start dfa)))))))
+  (fn [{:keys [states alphabet start accepts transitions]}]
+    (letfn [(next-state [sym curr-state] (get-in transitions (list curr-state sym)))
+            (build-accepted
+             [prefix state]
+             (for [s (shuffle alphabet) ; randomness avoids infinite depth-first searches
+                   :let [new-s (str prefix s)
+                         new-state (next-state s state)]]
+               (cond (accepts new-state) (lazy-seq (cons new-s (build-accepted new-s new-state)))
+                     new-state (lazy-seq (build-accepted new-s new-state)))))]
+      (filter identity (flatten (build-accepted "" start)))))
 )
+
+;;; Correct, faster, and uses less stack, but still blows stack with dfa6.
+;;;
+;;; queue contains {:state state :prefix vector-of-chars-that-got-us-here}
+(def __
+  (fn [{:keys [states alphabet start accepts transitions]}]
+    (letfn [(next-state [char curr-state]
+                        (get-in transitions (list curr-state char)))
+            (build-queue [state prefix-chars] {:state state :prefix prefix-chars})
+            (word [chars char] (str (apply str chars) char))
+            (build-accepted
+             [{:keys [state prefix]}]
+             (for [ch alphabet
+                   :let [new-state (next-state ch state)]]
+               (cond (accepts new-state) (let [s (conj prefix ch)]
+                                           (lazy-seq (cons (apply str s) (build-accepted (build-queue new-state s)))))
+                     new-state (lazy-seq (build-accepted (build-queue new-state (conj prefix ch)))))))]
+      (filter identity (flatten (build-accepted (build-queue start []))))))
+)
+
 
 (def dfa1 '{:states #{q0 q1 q2 q3}
             :alphabet #{a b c}
@@ -3114,6 +3124,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
             :transitions {q0 {a q1}
                           q1 {b q2}
                           q2 {c q3}}})
+
 (def dfa2 '{:states #{q0 q1 q2 q3 q4 q5 q6 q7}
             :alphabet #{e h i l o y}
             :start q0
@@ -3123,6 +3134,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                              q3 {l q5, y q4}
                              q5 {l q6}
                              q6 {o q7}}})
+
 (def dfa3 '{:states #{q0 q1 q2 q3 q4}
             :alphabet #{v w x y z}
             :start q0
@@ -3131,17 +3143,20 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                              q1 {v q2, w q2, x q2, y q2, z q2}
                              q2 {v q3, w q3, x q3, y q3, z q3}
                              q3 {v q4, w q4, x q4, y q4, z q4}}})
+
 (def dfa4 '{:states #{q0 q1}
             :alphabet #{0 1}
             :start q0
             :accepts #{q0}
             :transitions {q0 {0 q0, 1 q1}
                           q1 {0 q1, 1 q0}}})
+
 (def dfa5 '{:states #{q0 q1}
             :alphabet #{n m}
             :start q0
             :accepts #{q1}
             :transitions {q0 {n q0, m q1}}})
+
 (def dfa6 '{:states #{q0 q1 q2 q3 q4 q5 q6 q7 q8 q9}
             :alphabet #{i l o m p t}
             :start q0
@@ -3156,23 +3171,41 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                           q8 {l q9}
                           q9 {o q6}}})
 
-(and
- (= #{"a" "ab" "abc"}
-    (set (__ dfa1)))
- (= #{"hi" "hey" "hello"}
-    (set (__ dfa2)))
- (= (set (let [ss "vwxyz"] (for [i ss, j ss, k ss, l ss] (str i j k l))))
-    (set (__ dfa3)))
- (let [res (take 2000 (__ dfa4))]
+(defn t1 []
+  (= #{"a" "ab" "abc"}
+    (set (__ dfa1))))
+
+(defn t2 []
+  (= #{"hi" "hey" "hello"}
+    (set (__ dfa2))))
+
+(defn t3 []
+  (= (set (let [ss "vwxyz"] (for [i ss, j ss, k ss, l ss] (str i j k l))))
+    (set (__ dfa3))))
+
+(defn t4 []
+  (let [res (take 2000 (__ dfa4))]
    (and (every? (partial re-matches #"0*(?:10*10*)*") res)
-        (= res (distinct res))))
- (let [res (take 2000 (__ dfa5))]
+        (= res (distinct res)))))
+
+(defn t5 []
+  (let [res (take 2000 (__ dfa5))]
    (and (every? (partial re-matches #"n*m") res)
-        (= res (distinct res))))
- (let [res (take 2000 (__ dfa6))]
+        (= res (distinct res)))))
+
+(defn t6 []
+  (let [res (take 2000 (__ dfa6))]
    (and (every? (partial re-matches #"limit|(?:loop)+") res)
-        (= res (distinct res))))
- )
+        (= res (distinct res)))))
+
+(and
+ (t1)
+ (t2)
+ (t3)
+ (t4)
+ (t5)
+ (t6)
+)
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/152
