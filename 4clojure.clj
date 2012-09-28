@@ -3104,16 +3104,16 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
   (fn [{:keys [states alphabet start accepts transitions]}]
     (letfn [(next-state [char curr-state]
                         (get-in transitions (list curr-state char)))
-            (build-queue [state prefix-chars] {:state state :prefix prefix-chars})
+            (enqueue [state prefix-chars] {:state state :prefix prefix-chars})
             (word [chars char] (str (apply str chars) char))
-            (build-accepted
+            (gen-words
              [{:keys [state prefix]}]
              (for [ch alphabet
                    :let [new-state (next-state ch state)]]
                (cond (accepts new-state) (let [s (conj prefix ch)]
-                                           (lazy-seq (cons (apply str s) (build-accepted (build-queue new-state s)))))
-                     new-state (lazy-seq (build-accepted (build-queue new-state (conj prefix ch)))))))]
-      (filter identity (flatten (build-accepted (build-queue start []))))))
+                                           (lazy-seq (cons (apply str s) (gen-words (enqueue new-state s)))))
+                     new-state (lazy-seq (gen-words (enqueue new-state (conj prefix ch)))))))]
+      (filter identity (flatten (gen-words (enqueue start []))))))
 )
 
 
