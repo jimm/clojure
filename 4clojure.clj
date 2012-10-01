@@ -2748,9 +2748,10 @@
              (for [ch alphabet
                    :let [new-state (next-state ch state)]
                    :when new-state]
-               (if (accepts new-state) (let [s (conj prefix ch)]
-                                           (lazy-seq (conj (gen-words (enqueue new-state s)) (apply str s))))
-                   (lazy-seq (gen-words (enqueue new-state (conj prefix ch)))))))]
+               (if (accepts new-state)
+                 (let [s (conj prefix ch)]
+                   (lazy-seq (conj (gen-words (enqueue new-state s)) (apply str s))))
+                 (lazy-seq (gen-words (enqueue new-state (conj prefix ch)))))))]
       (flatten (gen-words (enqueue start [])))))
 )
 
@@ -2872,7 +2873,7 @@
     ;;
     ;; A "45deg" triangle is one that radiates from a point in a NE, NW, SE,
     ;; or SW direction in one of two orientations. One side runs N/S or E/W.
-    ;; Line lengths from the tip to the opposite side growsn in length by
+    ;; Line lengths from the tip to the opposite side grows in length by
     ;; one. There are eight growth possibilities: left and up, left and
     ;; down, right and up, right and down, up and left, up and right, down
     ;; and left, down and right.
@@ -3037,42 +3038,42 @@
 ; 1111  ->  **11
 ; 1111      ***1
 ; 1111      ****
-;;  (= 15 (__ [1 3 7 15 31]))
-;; ; 00001      0000*
-;; ; 00011      000**
-;; ; 00111  ->  00***
-;; ; 01111      0****
-;; ; 11111      *****
-;;  (= 3 (__ [3 3]))
-;; ; 11      *1
-;; ; 11  ->  **
-;;  (= 4 (__ [7 3]))
-;; ; 111      ***
-;; ; 011  ->  0*1
-;;  (= 6 (__ [17 22 6 14 22]))
-;; ; 10001      10001
-;; ; 10110      101*0
-;; ; 00110  ->  00**0
-;; ; 01110      0***0
-;; ; 10110      10110
-;;  (= 9 (__ [18 7 14 14 6 3]))
-;; ; 10010      10010
-;; ; 00111      001*0
-;; ; 01110      01**0
-;; ; 01110  ->  0***0
-;; ; 00110      00**0
-;; ; 00011      000*1
-;;  (= nil (__ [21 10 21 10]))
-;; ; 10101      10101
-;; ; 01010      01010
-;; ; 10101  ->  10101
-;; ; 01010      01010
-;;  (= nil (__ [0 31 0 31 0]))
-;; ; 00000      00000
-;; ; 11111      11111
-;; ; 00000  ->  00000
-;; ; 11111      11111
-;; ; 00000      00000
+ (= 15 (__ [1 3 7 15 31]))
+; 00001      0000*
+; 00011      000**
+; 00111  ->  00***
+; 01111      0****
+; 11111      *****
+ (= 3 (__ [3 3]))
+; 11      *1
+; 11  ->  **
+ (= 4 (__ [7 3]))
+; 111      ***
+; 011  ->  0*1
+ (= 6 (__ [17 22 6 14 22]))
+; 10001      10001
+; 10110      101*0
+; 00110  ->  00**0
+; 01110      0***0
+; 10110      10110
+ (= 9 (__ [18 7 14 14 6 3]))
+; 10010      10010
+; 00111      001*0
+; 01110      01**0
+; 01110  ->  0***0
+; 00110      00**0
+; 00011      000*1
+ (= nil (__ [21 10 21 10]))
+; 10101      10101
+; 01010      01010
+; 10101  ->  10101
+; 01010      01010
+ (= nil (__ [0 31 0 31 0]))
+; 00000      00000
+; 11111      11111
+; 00000  ->  00000
+; 11111      11111
+; 00000      00000
  )
 
 ;;; ****************************************************************
