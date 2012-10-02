@@ -3204,25 +3204,23 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;;; queue contains {:state state :prefix vector-of-chars-that-got-us-here}
 (def __
   (fn [{:keys [states alphabet start accepts transitions]}]
-    (letfn [(next-state [char curr-state]
-                        (get-in transitions (list curr-state char)))
-            (enqueue [state prefix-chars] {:state state :prefix prefix-chars})
-            (word [chars char] (str (apply str chars) char))
-            (gen-words
-             [{:keys [state prefix]}]
-             (for [ch alphabet
-                   :let [new-state (next-state ch state)]
-                   :when new-state]
+    (letfn [(gen-words
+             [state prefix]
+             (for [[ch new-state] (transitions state)
+                   :let [s (.concat prefix (.toString ch)) ; (str prefix ch)
+                         rest-of-words (gen-words new-state s)]]
                (if (accepts new-state)
-                 (let [s (conj prefix ch)]
-                   (lazy-seq (conj (gen-words (enqueue new-state s)) (apply str s))))
-                 (lazy-seq (gen-words (enqueue new-state (conj prefix ch)))))))]
-      (flatten (gen-words (enqueue start [])))))
+                 (cons s rest-of-words)
+                 rest-of-words)))]
+;;; FIXME it's flatten that's killing the stack. We only need to do that
+;;; because "for" is returning a list of lists.
+      (flatten (gen-words start ""))))
 )
 
 ;;; For testing. Returns nth element returned by dfa.
 (defn dfa-nth [dfa n] (drop (dec n) (take n (__ dfa))))
 
+;;; For testing.
 (defn time-dfa-nth [dfa n] (time (doall (dfa-nth dfa n))))
 
 (def dfa1 '{:states #{q0 q1 q2 q3}
