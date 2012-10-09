@@ -1982,7 +1982,7 @@
 ;; http://www.astrolog.org/labyrnth/algrithm.htm
 ;;
 ;; TODO flood fill from mouse. If hit cheese, return true. If fill up with
-;; wall and can't fill any furtyer, return false.
+;; wall and can't fill any further, return false.
 ;;
 ;; get mouse loc
 ;; turn into space
@@ -2714,10 +2714,6 @@
 ;;; ****************************************************************
 
 ;;; ****************************************************************
-;;; Unsolved
-;;; ****************************************************************
-
-;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/127
 
 (def __
@@ -2750,11 +2746,13 @@
                                      matrix))
           width (apply max (map count matrix-chars))
           height (count matrix)]
-      (letfn [(in-bounds? [row col] (and (>= row 0) (>= col 0) (< row height) (< col width)))
+      (letfn [(in-bounds? [row col]
+                (and (>= row 0) (>= col 0) (< row height) (< col width)))
+
               (cell [matrix-chars row col]
                 ;; Return char at [row col], or nil if out of bounds
-                (and (in-bounds? row col)
-                     (nth (nth matrix-chars row) col)))
+                (get-in matrix-chars (list row col) nil))
+
               (all-mineral? [matrix-chars line-start line-length row-cell-func]
                 ;; Return true if line-length cells starting at [row col]
                 ;; are all minerals. Coordinates in the line are calculated
@@ -2765,88 +2763,99 @@
                     (cond (zero? i) true
                           (not= \1 (cell matrix-chars row col)) false
                           :else (recur (dec i) (row-cell-func cell-loc))))))
+
               (area-from-num-lines [n line-length-func]
                 ;; Given line number 0-(n-1), line-length-func should return
                 ;; length of line.
                 (apply + (map line-length-func (range n))))
+
               (biggest-triangle [matrix-chars row col row-start-func row-cell-func line-length-func]
                 ;; row-start-func takes [row col] pair and line number (0-based) and returns row start coord.
                 ;; row-cell-func takes prev cell in line and returns next row in line
                 ;; line-length-func returns length of nth row (0-based)
                 ;; Returns map with keys :start, :gen-funcs, :area, and :num-lines
                 (let [num-lines (loop [num-lines 1]
-                                  (cond (all-mineral? matrix-chars
-                                                      (row-start-func [row col] (dec num-lines))
-                                                      (line-length-func (dec num-lines))
-                                                      row-cell-func)
-                                          (recur (inc num-lines))
-                                        :else num-lines))]
-                {:start [row col]
-                 :gen-funcs [row-start-func row-cell-func line-length-func]
-                 :num-lines num-lines
-                 :area (area-from-num-lines num-lines line-length-func)}))
+                                  (if (all-mineral? matrix-chars
+                                                    (row-start-func [row col] (dec num-lines))
+                                                    (line-length-func (dec num-lines))
+                                                    row-cell-func)
+                                    (recur (inc num-lines))
+                                    (dec num-lines)))]
+                  {:start [row col]
+                   :gen-funcs [row-start-func row-cell-func line-length-func]
+                   :num-lines num-lines
+                   :area (area-from-num-lines num-lines line-length-func)}))
+
               (remove-from-matrix [matrix-chars triangle]
                 ;; Remove triangle from matrix, replacing it with \0 chars
-                (println "remove-from-matrix") ; DEBUG
-                (println "  matrix-chars" matrix-chars) ; DEBUG
-                (println "  triangle" (merge triangle {:gen-funcs nil})) ; DEBUG
-;; FIXME
                 ;; Triangle is a map with keys :start, :gen-funcs, :num-lines, and :area
                 (let [[row col] (:start triangle)
                       [row-start-func row-cell-func line-length-func] (:gen-funcs triangle)
                       num-lines (:num-lines triangle)
                       r-matrix-chars (ref matrix-chars)
                       replace-cell (fn [m-chars row col]
-                                     (println "replace-cell m-chars" m-chars "row" row "col" col) ; DEBUG
                                      ;; Replace char at [row col] with \0
                                      (let [row-chars (nth m-chars row)
                                            new-row (str (subs row-chars 0 col) \0 (subs row-chars (inc col)))]
                                        (assoc m-chars row new-row)))]
                   (loop [line 1]
                     ;; loop over each line
-                    (println "  line" line "num-lines" num-lines) ; DEBUG
-                    (if (> line num-lines)
+                    (if (>= line num-lines)
                       @r-matrix-chars
                       (recur
                        (let [[row col] (row-start-func [row col] (dec line))]
                          (loop [i (line-length-func (dec line))
                                 cell-loc [row col]]
                            ;; loop over each char in the line
-                           (cond (zero? i) (inc line)
+                           (cond (not (in-bounds? row col)) line
+                                 (zero? i) (inc line)
                                  :else (let [[row col] cell-loc]
                                          (dosync
                                           (ref-set r-matrix-chars (replace-cell @r-matrix-chars row col)))
                                          (recur (dec i) (row-cell-func cell-loc)))))))))))]
-        (let [ ;; Pairs of functions. First returns starting coord of row
+
+        (let [;; Pairs of functions. First returns starting coord of row
               ;; n (0-based). Second returns next coord in row given
               ;; previous coord.
-              cardinal-funcs [[(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [r (inc c)])]
-                              [(fn [[r c] n] [(- r n) (- c n)]) (fn [[r c]] [r (inc c)])]
-                              [(fn [[r c] n] [(+ r n) (+ c n)]) (fn [[r c]] [(inc r) c])]
-                              [(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [(inc r) c])]]
-              t45deg-funcs [[(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (dec c)])]  ; up left
-                            [(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (inc c)])]  ; up right
-                            [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(inc r) c])]  ; right up
-                            [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(dec r) c])]  ; right down
-                            [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (inc c)])]  ; down right
-                            [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (dec c)])]  ; down left
-                            [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(dec r) c])]  ; left down
+              cardinal-funcs [[(fn [[r c] n] [(+ r n) (- c n)]) (fn [[r c]] [r (inc c)])]    ; south
+                              [(fn [[r c] n] [(- r n) (- c n)]) (fn [[r c]] [r (inc c)])]    ; north
+                              [(fn [[r c] n] [(- r n) (+ c n)]) (fn [[r c]] [(inc r) c])]    ; east
+                              [(fn [[r c] n] [(- r n) (- c n)]) (fn [[r c]] [(inc r) c])]]   ; west
+              t45deg-funcs [[(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (dec c)])]   ; up left
+                            [(fn [[r c] n] [(+ r n)       c]) (fn [[r c]] [r (inc c)])]   ; up right
+                            [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(inc r) c])]   ; right up
+                            [(fn [[r c] n] [      r (+ c n)]) (fn [[r c]] [(dec r) c])]   ; right down
+                            [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (inc c)])]   ; down right
+                            [(fn [[r c] n] [(- r n)       c]) (fn [[r c]] [r (dec c)])]   ; down left
+                            [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(dec r) c])]   ; left down
                             [(fn [[r c] n] [      r (- c n)]) (fn [[r c]] [(inc r) c])]]] ; left up
-          (loop [matrix-chars matrix-chars, area-so-far 0]
-            (println "matrix-chars" matrix-chars) ; DEBUG
-            (let [all-biggest-triangles (flatten (concat
-                                                  (for [row (range height), col (range width)] ; cardinal triangles
-                                                    (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) #(inc (* (dec %) 2))))
-                                                         cardinal-funcs))
-                                                  (for [row (range height), col (range width)] ; 45deg triangles
-                                                    (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) inc))
-                                                         t45deg-funcs))))
-                  biggest-tri (apply max-key :area all-biggest-triangles)
-                  biggest-area (:area biggest-tri)]
-              (if (< biggest-area 3)
-                area-so-far
-                (recur (remove-from-matrix matrix-chars biggest-tri) (+ area-so-far biggest-area)))))))))
+        (loop [matrix-chars matrix-chars, area-so-far 0]
+          (let [all-biggest-triangles (flatten (concat
+                                                (for [row (range height), col (range width)] ; cardinal triangles
+                                                  (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) #(inc (* % 2))))
+                                                       cardinal-funcs))
+                                                (for [row (range height), col (range width)] ; 45deg triangles
+                                                  (map (fn [func-pair] (biggest-triangle matrix-chars row col (first func-pair) (second func-pair) inc))
+                                                       t45deg-funcs))))
+                biggest-tri (apply max-key :area all-biggest-triangles)
+                biggest-area (:area biggest-tri)]
+            (if (< biggest-area 3)
+              (if (zero? area-so-far) nil area-so-far)
+              (recur (remove-from-matrix matrix-chars biggest-tri) (max area-so-far biggest-area)))))))))
   )
+
+(and
+ (= 10 (__ [15 15 15 15 15]))
+ (= 15 (__ [1 3 7 15 31]))
+ (= 3 (__ [3 3]))
+ (= 4 (__ [7 3]))
+ (= 6 (__ [17 22 6 14 22]))
+ (= 9 (__ [18 7 14 14 6 3]))
+ (= nil (__ [21 10 21 10]))
+ (= nil (__ [0 31 0 31 0]))
+ )
+
+;;; Expanded version of test below doesn't run with a simple M-C-x in Emacs.
 
 (and
  ;; Everyone loves triangles, and it's easy to understand why---they're so
@@ -2893,8 +2902,6 @@
  ;;
  ;; - If no minerals can be harvested from the rock, your function should
  ;;   return nil
- ;;
- ;; </ul>
 (= 10 (__ [15 15 15 15 15]))
 ; 1111      1111
 ; 1111      *111
@@ -2938,6 +2945,171 @@
 ; 11111      11111
 ; 00000      00000
  )
+
+;;; ****************************************************************
+;;; http://www.4clojure.com/problem/164
+
+;; A deterministic finite automaton (DFA)
+;; (http://en.wikipedia.org/wiki/Deterministic_finite_automaton) is an
+;; abstract machine that recognizes a regular language
+;; (http://en.wikipedia.org/wiki/Regular_language). Usually a DFA is defined
+;; by a 5-tuple, but instead we'll use a map with 5 keys:
+;; 
+;; :states is the set of states for the DFA.
+;; :alphabet is the set of symbols included in the language recognized by the DFA.
+;; :start is the start state of the DFA.
+;; :accepts is the set of accept states in the DFA.
+;; :transitions is the transition function for the DFA, mapping :states X :alphabet onto :states.
+;;
+;; Write a function that takes as input a DFA definition (as described
+;; above) and returns a sequence enumerating all strings in the language
+;; recognized by the DFA. Note: Although the DFA itself is finite and only
+;; recognizes finite-length strings it can still recognize an infinite set
+;; of finite-length strings. And because stack space is finite, make sure
+;; you don't get stuck in an infinite loop that's not producing results
+;; every so often!
+
+;;; Blows stack on 4clojure.com at dfa4, though OK on my machine.
+(def __
+  (fn [{:keys [states alphabet start accepts transitions]}]
+    (letfn [(gen-words
+             [state prefix]
+             (for [[ch new-state] (transitions state)
+                   :let [s (.concat prefix (.toString ch)) ; (str prefix ch)
+                         rest-of-words (gen-words new-state s)]]
+               (if (accepts new-state)
+                 (cons s rest-of-words)
+                 rest-of-words)))]
+    ;;; FIXME it's flatten that's killing the stack. We only need to do that
+    ;;; because "for" is returning a list of lists.
+      (flatten (gen-words start ""))))
+)
+
+;;; ... after many iterations ...
+
+(def __
+     (fn [{:keys [states start accepts transitions]}]
+       ;;; from https://gist.github.com/3125082
+       ;;;
+       ;;; My solution ended up being close to this. It worked on my machine
+       ;;; but blew the stack on 4clojure.com, probably because I'd never
+       ;;; heard of PersistentQueue before. I could only get it to work
+       ;;; after reading that gist and the author's comments on Stack
+       ;;; Overflow. I might as well use it and give credit where it's due.
+       ((fn words [queue]
+          (lazy-seq
+           (when (seq queue)
+             (let [[state path] (peek queue)
+                   more-results (words (into (pop queue)
+                                             (for [[letter state] (transitions state)]
+                                               [state (conj path letter)])))]
+               (if (accepts state)
+                 (cons (apply str path)
+                       more-results)
+                 more-results)))))
+        (conj clojure.lang.PersistentQueue/EMPTY
+              [start []])))
+)
+
+;;; For testing. Returns nth element returned by dfa.
+(defn dfa-nth [dfa n] (drop (dec n) (take n (__ dfa))))
+
+;;; For testing.
+(defn time-dfa-nth [dfa n] (time (doall (dfa-nth dfa n))))
+
+(def dfa1 '{:states #{q0 q1 q2 q3}
+            :alphabet #{a b c}
+            :start q0
+            :accepts #{q1 q2 q3}
+            :transitions {q0 {a q1}
+                          q1 {b q2}
+                          q2 {c q3}}})
+
+(def dfa2 '{:states #{q0 q1 q2 q3 q4 q5 q6 q7}
+            :alphabet #{e h i l o y}
+            :start q0
+            :accepts #{q2 q4 q7}
+            :transitions {q0 {h q1}
+                             q1 {i q2, e q3}
+                             q3 {l q5, y q4}
+                             q5 {l q6}
+                             q6 {o q7}}})
+
+(def dfa3 '{:states #{q0 q1 q2 q3 q4}
+            :alphabet #{v w x y z}
+            :start q0
+            :accepts #{q4}
+            :transitions {q0 {v q1, w q1, x q1, y q1, z q1}
+                             q1 {v q2, w q2, x q2, y q2, z q2}
+                             q2 {v q3, w q3, x q3, y q3, z q3}
+                             q3 {v q4, w q4, x q4, y q4, z q4}}})
+
+(def dfa4 '{:states #{q0 q1}
+            :alphabet #{0 1}
+            :start q0
+            :accepts #{q0}
+            :transitions {q0 {0 q0, 1 q1}
+                          q1 {0 q1, 1 q0}}})
+
+(def dfa5 '{:states #{q0 q1}
+            :alphabet #{n m}
+            :start q0
+            :accepts #{q1}
+            :transitions {q0 {n q0, m q1}}})
+
+(def dfa6 '{:states #{q0 q1 q2 q3 q4 q5 q6 q7 q8 q9}
+            :alphabet #{i l o m p t}
+            :start q0
+            :accepts #{q5 q8}
+            :transitions {q0 {l q1}
+                          q1 {i q2, o q6}
+                          q2 {m q3}
+                          q3 {i q4}
+                          q4 {t q5}
+                          q6 {o q7}
+                          q7 {p q8}
+                          q8 {l q9}
+                          q9 {o q6}}})
+
+(defn t1 []
+  (= #{"a" "ab" "abc"}
+    (set (__ dfa1))))
+
+(defn t2 []
+  (= #{"hi" "hey" "hello"}
+    (set (__ dfa2))))
+
+(defn t3 []
+  (= (set (let [ss "vwxyz"] (for [i ss, j ss, k ss, l ss] (str i j k l))))
+    (set (__ dfa3))))
+
+(defn t4 []
+  (let [res (take 2000 (__ dfa4))]
+   (and (every? (partial re-matches #"0*(?:10*10*)*") res)
+        (= res (distinct res)))))
+
+(defn t5 []
+  (let [res (take 2000 (__ dfa5))]
+   (and (every? (partial re-matches #"n*m") res)
+        (= res (distinct res)))))
+
+(defn t6 []
+  (let [res (take 2000 (__ dfa6))]
+   (and (every? (partial re-matches #"limit|(?:loop)+") res)
+        (= res (distinct res)))))
+
+(and
+ (t1)
+ (t2)
+ (t3)
+ (t4)
+ (t5)
+ (t6)
+)
+
+;;; ****************************************************************
+;;; Unsolved
+;;; ****************************************************************
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/140
@@ -3125,6 +3297,12 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
      (fn [v]
        (let [minlen (apply min (map count v))
              maxlen (apply max (map count v))]
+         (letfn [(alignments            ; returns all different alignments of v
+                  []
+                  (let [lengths (map count v)]
+                    )
+                  )]
+           )
          )
     )
   )
@@ -3175,140 +3353,3 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
          [8 1 2 4 5]])
     {4 1, 3 1, 2 7})
  )
-
-;;; ****************************************************************
-;;; http://www.4clojure.com/problem/164
-
-;; A deterministic finite automaton (DFA)
-;; (http://en.wikipedia.org/wiki/Deterministic_finite_automaton) is an
-;; abstract machine that recognizes a regular language
-;; (http://en.wikipedia.org/wiki/Regular_language). Usually a DFA is defined
-;; by a 5-tuple, but instead we'll use a map with 5 keys:
-;; 
-;; :states is the set of states for the DFA.
-;; :alphabet is the set of symbols included in the language recognized by the DFA.
-;; :start is the start state of the DFA.
-;; :accepts is the set of accept states in the DFA.
-;; :transitions is the transition function for the DFA, mapping :states X :alphabet onto :states.
-;;
-;; Write a function that takes as input a DFA definition (as described
-;; above) and returns a sequence enumerating all strings in the language
-;; recognized by the DFA. Note: Although the DFA itself is finite and only
-;; recognizes finite-length strings it can still recognize an infinite set
-;; of finite-length strings. And because stack space is finite, make sure
-;; you don't get stuck in an infinite loop that's not producing results
-;; every so often!
-
-;;; Blows stack on 4clojure.com at dfa4, though OK on my machine.
-;;;
-;;; queue contains {:state state :prefix vector-of-chars-that-got-us-here}
-(def __
-  (fn [{:keys [states alphabet start accepts transitions]}]
-    (letfn [(gen-words
-             [state prefix]
-             (for [[ch new-state] (transitions state)
-                   :let [s (.concat prefix (.toString ch)) ; (str prefix ch)
-                         rest-of-words (gen-words new-state s)]]
-               (if (accepts new-state)
-                 (cons s rest-of-words)
-                 rest-of-words)))]
-;;; FIXME it's flatten that's killing the stack. We only need to do that
-;;; because "for" is returning a list of lists.
-      (flatten (gen-words start ""))))
-)
-
-;;; For testing. Returns nth element returned by dfa.
-(defn dfa-nth [dfa n] (drop (dec n) (take n (__ dfa))))
-
-;;; For testing.
-(defn time-dfa-nth [dfa n] (time (doall (dfa-nth dfa n))))
-
-(def dfa1 '{:states #{q0 q1 q2 q3}
-            :alphabet #{a b c}
-            :start q0
-            :accepts #{q1 q2 q3}
-            :transitions {q0 {a q1}
-                          q1 {b q2}
-                          q2 {c q3}}})
-
-(def dfa2 '{:states #{q0 q1 q2 q3 q4 q5 q6 q7}
-            :alphabet #{e h i l o y}
-            :start q0
-            :accepts #{q2 q4 q7}
-            :transitions {q0 {h q1}
-                             q1 {i q2, e q3}
-                             q3 {l q5, y q4}
-                             q5 {l q6}
-                             q6 {o q7}}})
-
-(def dfa3 '{:states #{q0 q1 q2 q3 q4}
-            :alphabet #{v w x y z}
-            :start q0
-            :accepts #{q4}
-            :transitions {q0 {v q1, w q1, x q1, y q1, z q1}
-                             q1 {v q2, w q2, x q2, y q2, z q2}
-                             q2 {v q3, w q3, x q3, y q3, z q3}
-                             q3 {v q4, w q4, x q4, y q4, z q4}}})
-
-(def dfa4 '{:states #{q0 q1}
-            :alphabet #{0 1}
-            :start q0
-            :accepts #{q0}
-            :transitions {q0 {0 q0, 1 q1}
-                          q1 {0 q1, 1 q0}}})
-
-(def dfa5 '{:states #{q0 q1}
-            :alphabet #{n m}
-            :start q0
-            :accepts #{q1}
-            :transitions {q0 {n q0, m q1}}})
-
-(def dfa6 '{:states #{q0 q1 q2 q3 q4 q5 q6 q7 q8 q9}
-            :alphabet #{i l o m p t}
-            :start q0
-            :accepts #{q5 q8}
-            :transitions {q0 {l q1}
-                          q1 {i q2, o q6}
-                          q2 {m q3}
-                          q3 {i q4}
-                          q4 {t q5}
-                          q6 {o q7}
-                          q7 {p q8}
-                          q8 {l q9}
-                          q9 {o q6}}})
-
-(defn t1 []
-  (= #{"a" "ab" "abc"}
-    (set (__ dfa1))))
-
-(defn t2 []
-  (= #{"hi" "hey" "hello"}
-    (set (__ dfa2))))
-
-(defn t3 []
-  (= (set (let [ss "vwxyz"] (for [i ss, j ss, k ss, l ss] (str i j k l))))
-    (set (__ dfa3))))
-
-(defn t4 []
-  (let [res (take 2000 (__ dfa4))]
-   (and (every? (partial re-matches #"0*(?:10*10*)*") res)
-        (= res (distinct res)))))
-
-(defn t5 []
-  (let [res (take 2000 (__ dfa5))]
-   (and (every? (partial re-matches #"n*m") res)
-        (= res (distinct res)))))
-
-(defn t6 []
-  (let [res (take 2000 (__ dfa6))]
-   (and (every? (partial re-matches #"limit|(?:loop)+") res)
-        (= res (distinct res)))))
-
-(and
- (t1)
- (t2)
- (t3)
- (t4)
- (t5)
- (t6)
-)
