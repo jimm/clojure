@@ -24,7 +24,7 @@
  )
 
 ;;; ****************************************************************
-;;; How about code to load the problems? Here we go:
+;;; How about code to create templates for some of the problems? Here we go:
 ;;; ****************************************************************
 
 (def unsolved-problems
