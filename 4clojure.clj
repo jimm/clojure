@@ -3352,18 +3352,39 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; (1) Of course, we can consider sequences instead of vectors. 
 ;; (2) Length of a vector is the number of elements in the vector.
 
-
 (def __
      (fn [v]
-       (let [minlen (apply min (map count v))
-             maxlen (apply max (map count v))]
-         (letfn [(alignments            ; returns all different alignments of v
+       (let [num-rows (count v)
+             lengths (map count v)
+             maxlen (apply max lengths)
+             offsets (for [row v] (range (- maxlen (dec (count row)))))] ; all possible offsets
+         (letfn [(alignment ; returns seq of seqs with nils at beginning of rows that are offset
+                  [row-offsets]         ; one offset for each row
+                  (for [i (range num-rows)
+                        :let [row (nth v i)
+                              offset (nth row-offsets i)]]
+                    (concat (take offset (repeat nil)) row)))
+                 (combis
+                  ;; Given a list of lists of numbers, return a list whose
+                  ;; elements are all the ordered combitations of coll. So
+                  ;; for example turns '((0 1 2) (0) (0 1))) into
+                  ;; '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1)).
+                  [coll]
+                  (letfn [(do-combis
+                           [coll prev]
+                           (if coll
+                             (for [n (first coll)
+                                   :let [prefix (concat prev (list n))]]
+                               (do-combis (next coll) prefix))
+                             prev))]
+                    (partition (count coll) (flatten (do-combis coll '())))))
+                 (alignments
                   []
-                  (let [lengths (map count v)]
-                    )
-                  )]
-           )
-         )
+                  (for [row-offset (combis offsets)] (alignment row-offset)))]
+           (for [as (alignments)]
+             ;; Count Latin squares and add to set of counts
+             )
+         ))
     )
   )
 
