@@ -3362,7 +3362,9 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
              lengths (map count v)
              maxlen (apply max lengths)
              seen-squares (ref #{})]
-         (letfn [(alignment ; returns seq of seqs with nils at beginning of rows that are offset
+         (letfn [(alignment
+                  ;; returns seq of seqs with nils at beginning and end of
+                  ;; rows that are offset
                   [row-offsets]         ; one offset for each row
                   (for [i (range num-rows)
                         :let [row (nth v i)
@@ -3389,44 +3391,34 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                  (square-at
                   ;; Returns nil if square contains nil or is out of bounds
                   [alignment row col size]
-                  (let [square (for [r (range row (+ row size))]
-                                 (subvec (vec (nth alignment r)) col (+ col size)))
-                        flattened (flatten square)]
-                    (if (= (count flattened) (count (filter identity flattened))) ; there are no nils
-                      square
-                      nil)))
-                 (latin-square?
-                  [square]
-                  (let [size (count square)
-                        num-pairs (* size size)
-                        flattened-square (flatten square)
-                        rs-cs-pairs (for [r (range size)
-                                          c (range size)
-                                          :let [s (get-in square (list r c))]]
-                                      [[r s] [c s]])]
-                    (and (= size (count (set flattened-square))) ; there are size unique entities
-                         (apply distinct? (map first rs-cs-pairs))
-                         (apply distinct? (map second rs-cs-pairs)))))]
-           (let [latin-squares (for [alignment (alignments)
-                                     row (range num-rows)
-                                     col (range maxlen)
-                                     size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
-                                     :when (>= size 2)
-                                     :let [square (square-at alignment row col size)]
-                                     :when (and square (latin-square? (vec square)))]
-                                 square)]
-             (println "alignments") (time (alignments))
-             (println "(count alignments)" (count (alignments)))
-             (println "not ls") (time (not latin-squares))
-             (println "(take 1 ls)") (time (take 1 latin-squares))
-             (println "(last ls)") (time (last latin-squares))
-             (println "set ls") (time (set latin-squares))
-             (println "set ls") (time (set latin-squares))
-             (println "map set ls") (time (map (comp count first) (set latin-squares)))
-             (println "(count latin-squares)" (count latin-squares))
-             (println "(count (set latin-squares))" (count (set latin-squares)))
-             (println "(take 10 (drop 50 latin-squares))" (take 10 (drop 50 latin-squares)))
-             (frequencies (map (comp count first) (set latin-squares)))))))
+                  (when (and (nth (nth alignment row) col) ; quick check for nil at beginning or end
+                             (nth (nth alignment (dec (+ row size))) (dec (+ col size))))
+                    (let [square (for [r (range row (+ row size))]
+                                   (subvec (vec (nth alignment r)) col (+ col size)))
+                          flattened (flatten square)]
+                      (if (= (count flattened) (count (filter identity flattened))) ; there are no nils
+                        square
+                        nil))))
+                 (rows-and-cols [size] (for [r (range size), c (range size)] [r c]))]
+           (let [m-rows-and-cols (memoize rows-and-cols)]
+             (letfn [(latin-square?
+                      [square size]
+                      (let [flattened-square (flatten square)]
+                        (when (= size (count (set flattened-square))) ; there are size unique entities
+                          (let [rs-cs-pairs (map (fn [[r c] s] [[r s] [c s]])
+                                                 (m-rows-and-cols size)
+                                                 flattened-square)]
+                            (and (apply distinct? (map first rs-cs-pairs))
+                                 (apply distinct? (map second rs-cs-pairs)))))))]
+               (let [mls? (memoize latin-square?)
+                     latin-squares (for [alignment (alignments)
+                                         row (range num-rows)
+                                         col (range maxlen)
+                                         size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
+                                         :let [square (square-at alignment row col size)]
+                                         :when (and square (mls? (vec square) size))]
+                                     square)]
+                 (frequencies (map (comp count first) (set latin-squares)))))))))
   )
 
 (time (__ [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]]))
