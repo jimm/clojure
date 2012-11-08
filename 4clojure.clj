@@ -3404,22 +3404,14 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 (defn square-at
   ;; Returns nil if square contains nil
   [alignment row col size]
-  (let [endrow (+ row size -1)
-        endcol (+ col size -1)]
-    ;; (println "alignment" alignment) ; DEBUG
-    ;; (println "  " "row" row "col" col) ; DEBUG
-    ;; (println "  " "(get-in alignment [row col])" (get-in alignment [row col])) ; DEBUG
-    (when (and (get-in alignment [   row,    col])
-               (get-in alignment [   row, endcol])
-               (get-in alignment [endrow,    col])
-               (get-in alignment [endrow, endcol]))
-      (let [square (for [r (range row (+ row size))
-                         :let [square-row (subvec (vec (nth alignment r)) col (+ col size))]
-                         :when (every? identity square-row)] ; no nils in the row
-                     square-row)]
-        (if (= size (count square)) ; if have # rows expected, there are no nils
-          square
-          nil)))))
+  (loop [rows (subvec alignment row (+ row size))
+         square []]
+    (if (nil? rows)
+      square
+      (let [square-row (subvec (first rows) col (+ col size))]
+        (if (not (and (first square-row) (last square-row)))
+          nil                           ; bail early
+          (recur (next rows) (conj square square-row)))))))
 
 (defn rows-and-cols
   [size]
@@ -3443,7 +3435,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                             col (range (dec maxlen))
                             size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
                             :let [square (square-at alignment row col size)]
-                            :when (and square (latin-square? (vec square) size))]
+                            :when (and square (latin-square? square size))]
                         square)]
     (println "(count (alignments))" (count (alignments))) ; DEBUG
     (println "(count latin-squares)" (count latin-squares)) ; DEBUG
