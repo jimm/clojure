@@ -1,0 +1,3 @@
+#!/bin/sh
+cd /Applications/music/SuperCollider/SuperCollider.app/Contents/Resources
+exec ./sclang $*
