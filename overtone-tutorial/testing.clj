@@ -1,5 +1,8 @@
 ;;; https://github.com/overtone/overtone/wiki/Getting-Started
 
+;;; NOTE: don't need to run SuperCollider because Overtone has the synth
+;;; engine packaged as a library, along with minimal JNA interface.
+
 (use 'overtone.live)
 (boot-external-server)                  ; does this work? need to click "boot" in SC instead?
 (connect-external-server 57110)         ; default port
