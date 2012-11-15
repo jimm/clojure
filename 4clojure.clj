@@ -3357,13 +3357,11 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 
 ;; For debugging only
 (def v [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]])
-(def num-rows (count v))
-(def maxlen (apply max (map count v)))
 
 (defn alignment
   ;; returns seq of seqs with nils at beginning and end of
   ;; rows that are offset
-  [row-offsets]         ; one offset for each row
+  [v maxlen row-offsets]                ; one offset for each row
   (loop [rows v
          offsets row-offsets
          aligned-rows []]
@@ -3392,14 +3390,14 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
    (partition (count coll) (flatten (do-combis coll '())))))
 
 (defn alignments
-  []
+  [v maxlen]
   (let [offsets (for [row v] (range (- maxlen (dec (count row)))))] ; all possible offsets
     (loop [row-offset-combis (combis offsets)
            as []]
       (if-not row-offset-combis
         as
         (recur (next row-offset-combis)
-               (conj as (vec (alignment (first row-offset-combis)))))))))
+               (conj as (vec (alignment v maxlen (first row-offset-combis)))))))))
 
 (defn square-at
   ;; Returns nil if square contains nil
@@ -3428,108 +3426,96 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
         (and (apply distinct? (map first rs-cs-pairs))
              (apply distinct? (map second rs-cs-pairs)))))))
 
-(defn doit
-  []
-  (let [latin-squares (for [alignment (alignments)
+(defn __
+  [v]
+  (let [num-rows (count v)
+        maxlen (apply max (map count v))
+        latin-squares (for [alignment (alignments v maxlen)
                             row (range (dec num-rows))
                             col (range (dec maxlen))
                             size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
                             :let [square (square-at alignment row col size)]
                             :when (and square (latin-square? square size))]
                         square)]
-    (println "(count (alignments))" (count (alignments))) ; DEBUG
-    (println "(count latin-squares)" (count latin-squares)) ; DEBUG
-    (println "(count (set latin-squares))" (count (set latin-squares))) ; DEBUG
     (frequencies (map (comp count first) (set latin-squares)))))
+
+(time (__ v))
 
 (def __
      (fn [v]
-       (let [num-rows (count v)
-             maxlen (apply max (map count v))]
-         (letfn [
-                 (alignment
-                  ;; returns seq of seqs with nils at beginning and end of
-                  ;; rows that are offset
-                  [row-offsets]         ; one offset for each row
-                  (loop [rows v
-                         offsets row-offsets
-                         aligned-rows []]
-                    (if-not rows
-                      aligned-rows
-                      (recur (next rows)
-                             (next offsets)
-                             (conj aligned-rows (vec (concat (take (first offsets) (repeat nil))
-                                                        (first rows)
-                                                        (take (- maxlen (first offsets) (count (first rows)))
-                                                              (repeat nil)))))))))
-
-                 (combis
-                  ;; Given a list of lists of numbers, return a list whose
-                  ;; elements are all the ordered combitations of coll. So
-                  ;; for example turns '((0 1 2) (0) (0 1))) into
-                  ;; '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1)).
-                  [coll]
-                  (letfn [(do-combis
-                           [coll prev]
-                           (if coll
-                             (for [n (first coll)
-                                   :let [prefix (concat prev (list n))]]
-                               (do-combis (next coll) prefix))
-                             prev))]
-                    (partition (count coll) (flatten (do-combis coll '())))))
-
-                 (alignments
-                  []
-                  (let [offsets (for [row v] (range (- maxlen (dec (count row)))))] ; all possible offsets
-                    (loop [row-offset-combis (combis offsets)
-                           as []]
-                      (if-not row-offset-combis
-                        as
-                        (recur (next row-offset-combis)
-                               (conj as (vec (alignment (first row-offset-combis)))))))))
-
-                 (square-at
-                  ;; Returns nil if square contains nil
-                  [alignment row col size]
-                  (let [endrow (+ row size -1)
-                        endcol (+ col size -1)]
-                    (when (and (get-in alignment [   row,    col])
-                               (get-in alignment [   row, endcol])
-                               (get-in alignment [endrow,    col])
-                               (get-in alignment [endrow, endcol]))
-                      (let [square (for [r (range row (+ row size))
-                                         :let [square-row (subvec (vec (nth alignment r)) col (+ col size))]
-                                         :when (every? identity square-row)] ; no nils in the row
-                                     square-row)]
-                        (if (= size (count square)) ; if have # rows expected, there are no nils
-                          square
-                          nil)))))
-
-                 (rows-and-cols
-                  [size]
-                  (for [r (range size), c (range size)]
-                    [r c]))
-
-                 (latin-square?
-                  [square size]
-                  (let [flattened-square (flatten square)]
-                    (when (= size (count (set flattened-square))) ; there are size unique entities
-                      (let [rs-cs-pairs (map (fn [[r c] s] [[r s] [c s]])
-                                             (rows-and-cols size)
-                                             flattened-square)]
-                        (and (apply distinct? (map first rs-cs-pairs))
-                             (apply distinct? (map second rs-cs-pairs)))))))]
-           (let [latin-squares (for [alignment (alignments)
-                                     row (range (dec num-rows))
-                                     col (range (dec maxlen))
-                                     size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
-                                     :let [square (square-at alignment row col size)]
-                                     :when (and square (latin-square? (vec square) size))]
-                                 square)]
-             (frequencies (map (comp count first) (set latin-squares)))))))
+       (letfn [(alignment
+                ;; returns seq of seqs with nils at beginning and end of
+                ;; rows that are offset
+                [v maxlen row-offsets]                ; one offset for each row
+                (loop [rows v
+                       offsets row-offsets
+                       aligned-rows []]
+                  (if-not rows
+                    aligned-rows
+                    (recur (next rows)
+                           (next offsets)
+                           (conj aligned-rows (vec (concat (take (first offsets) (repeat nil))
+                                                           (first rows)
+                                                           (take (- maxlen (first offsets) (count (first rows)))
+                                                                 (repeat nil)))))))))
+               (combis
+                ;; Given a list of lists of numbers, return a list whose
+                ;; elements are all the ordered combitations of coll. So
+                ;; for example turns '((0 1 2) (0) (0 1))) into
+                ;; '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1)).
+                [coll]
+                (letfn [(do-combis
+                         [coll prev]
+                         (if coll
+                           (for [n (first coll)
+                                 :let [prefix (concat prev (list n))]]
+                             (do-combis (next coll) prefix))
+                           prev))]
+                  (partition (count coll) (flatten (do-combis coll '())))))
+               (alignments
+                [v maxlen]
+                (let [offsets (for [row v] (range (- maxlen (dec (count row)))))] ; all possible offsets
+                  (loop [row-offset-combis (combis offsets)
+                         as []]
+                    (if-not row-offset-combis
+                      as
+                      (recur (next row-offset-combis)
+                             (conj as (vec (alignment v maxlen (first row-offset-combis)))))))))
+               (square-at
+                ;; Returns nil if square contains nil
+                [alignment row col size]
+                (loop [rows (subvec alignment row (+ row size))
+                       square []]
+                  (if (nil? rows)
+                    square
+                    (let [square-row (subvec (first rows) col (+ col size))]
+                      (if (not (and (first square-row) (last square-row)))
+                        nil             ; bail early
+                        (recur (next rows) (conj square square-row)))))))
+               (rows-and-cols
+                [size]
+                (for [r (range size), c (range size)]
+                  [r c]))
+               (latin-square?
+                [square size]
+                (let [flattened-square (flatten square)]
+                  (when (= size (count (set flattened-square))) ; there are size unique entities
+                    (let [rs-cs-pairs (map (fn [[r c] s] [[r s] [c s]])
+                                           (rows-and-cols size)
+                                           flattened-square)]
+                      (and (apply distinct? (map first rs-cs-pairs))
+                           (apply distinct? (map second rs-cs-pairs)))))))]
+         (let [num-rows (count v)
+               maxlen (apply max (map count v))
+               latin-squares (for [alignment (alignments v maxlen)
+                                   row (range (dec num-rows))
+                                   col (range (dec maxlen))
+                                   size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
+                                   :let [square (square-at alignment row col size)]
+                                   :when (and square (latin-square? square size))]
+                               square)]
+           (frequencies (map (comp count first) (set latin-squares))))))
 )
-
-(time (__ [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]]))
 
 (and
  (= (__ '[[A B C D]
