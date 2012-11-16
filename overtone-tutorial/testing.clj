@@ -4,8 +4,10 @@
 ;;; engine packaged as a library, along with minimal JNA interface.
 
 (use 'overtone.live)
-(boot-external-server)                  ; does this work? need to click "boot" in SC instead?
-(connect-external-server 57110)         ; default port
+;;; The next two are not needed if you're using the the built-in SC server
+;;; that comes with Overtone.
+;; (boot-external-server)                  ; does this work? need to click "boot" in SC instead?
+;; (connect-external-server 57110)         ; default port
 
 (definst foo [] (saw 220))
 (foo)
@@ -82,3 +84,21 @@
 
 (event-debug-on)
 (event-debug-off)
+
+;;; ****************************************************************
+
+;;; Bass note w/3 slightly out-of-tune oscs
+
+(definst thick-bass [freq 55 depth 1 rate 2 length 3]
+  (* 0.8
+     (line:kr 1 0.4 length FREE)
+     (saw freq) ; (+ freq (* depth (sin-osc:kr rate))))
+     (saw (+ freq 0.5))
+     (saw (- freq 0.5))
+;;       (saw (dec freq))
+       ;; (saw (+ (inc freq) (* depth (sin-osc:kr (* rate 0.59)))))
+       ;; (saw (+ (dec freq) (* depth (sin-osc:kr (* rate 2.01)))))
+            )))
+
+(thick-bass)
+(kill thick-bass)
