@@ -1,0 +1,16 @@
+* Ideas
+
+- At start of play give metronome to song. Let tempo in meta-track modify
+  metronome tempo.
+
+- Map track (by name?) + channel to instrument
+  - At play time
+
+- Load raw messages
+  - Except note off; add duration to note on message
+
+* Limitations / Bugs
+
+- Does not calculate tempo at all; MIDI tick == milliseconds
+
+- Assumes one channel per track, ignores channel
