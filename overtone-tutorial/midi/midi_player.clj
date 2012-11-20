@@ -126,7 +126,7 @@
      (env-gen (perc 0.15 dur) :action FREE)
      (saw freq)))
 
-(def midi-file "/Users/jimm/src/github/clojure/overtone-tutorial/midi/data/at_sea.midi")
+(def midi-file "/Users/jimm/Documents/Dropbox/Music/Vision Sequences/Equal Rites/At Sea.mid")
 (def midi-file "/Users/jimm/Documents/Dropbox/Music/Vision Sequences/Equal Rites/Main Theme.mid")
 (def song (song-from-file midi-file))
 
