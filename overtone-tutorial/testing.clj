@@ -29,6 +29,10 @@
 
 (definst quux [freq 440] (* 0.3 (saw freq)))
 (quux)
+;; ctl lets you change parameters of one or more running synths. (For more
+;; than one pass in a vector of synth ids, or if you've used definst then
+;; you can use the instrument name which represents the group of all synths
+;; running under that name).
 (ctl quux :freq 660)
 (kill quux)
 
@@ -86,19 +90,50 @@
 (event-debug-off)
 
 ;;; ****************************************************************
+;;; from the mailing list, modified to bring up to date
 
-;;; Bass note w/3 slightly out-of-tune oscs
+(definst example1 []
+  (let [n-exciters 10
+        n-delays 7
+        n-allpasses 4
+        mix #(apply + %)
+        exciter (fn [] (resonz
+                        (* 50 (dust 0.2))
+                        (+ 200 (rand-int 3000))
+                        0.05))
+        noisy-delay (fn [in] (let [noiz (+ 0.05
+                                           (* 0.04 (lf-noise1:kr (clojure.core/rand 0.1))))]
+                               (comb-l in 0.1 noiz 15)))
+        exciters (mix (take n-exciters (repeatedly exciter)))
+        delays (mix (take n-delays (repeatedly #(noisy-delay exciters))))
+        reverb (delay-n exciters 0.048)
+        out (reduce (fn [in _] (allpass-n in 0.05 [(clojure.core/rand 0.05)
+                                                   (clojure.core/rand 0.05)] 1))
+                    delays
+                    (range n-allpasses))]
+    (+ reverb out)))
 
-(definst thick-bass [freq 55 depth 1 rate 2 length 3]
-  (* 0.8
-     (line:kr 1 0.4 length FREE)
-     (saw freq) ; (+ freq (* depth (sin-osc:kr rate))))
-     (saw (+ freq 0.5))
-     (saw (- freq 0.5))
-;;       (saw (dec freq))
-       ;; (saw (+ (inc freq) (* depth (sin-osc:kr (* rate 0.59)))))
-       ;; (saw (+ (dec freq) (* depth (sin-osc:kr (* rate 2.01)))))
-            )))
+(do
+  (example1)
+  (at (+ (.getTime (java.util.Date.)) 10000) (kill example1)))
 
-(thick-bass)
-(kill thick-bass)
+;; ---
+;; had to change :free to FREE
+
+(definst bong [note 60 velocity 50]
+  (let [freq (midicps note)
+        src (+ (sin-osc freq)
+               (* 0.5 (sin-osc (* 2.1 freq)))
+               (* 0.25 (sin-osc (* 4.9 freq)))
+               (* 0.2 (sin-osc (* 7.3 freq)))
+               (* 0.05 (sin-osc (* 11.2 freq)))
+               (* 0.1 (triangle (* 8.8 freq)))
+               (* 0.1 (triangle (* 8.8 freq)))
+               (* 0.1 (square (* 1.3 freq)))
+               (* 0.1 (triangle (* 2.8 freq)))
+               (* 0.1 (square (* 4.2 freq))))
+        env (env-gen (perc 0.01 5) :action FREE)]
+    (* (/ velocity 128) src env)))
+
+;;; See also
+;;; - defcgen
