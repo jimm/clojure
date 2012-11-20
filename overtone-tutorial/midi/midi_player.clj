@@ -53,20 +53,45 @@
   [file]
   (let [java-seq (javax.sound.midi.MidiSystem/getSequence (java.io.File. file))]
     (->Song (.getResolution java-seq)
-            (map java-track->track (.getTracks java-seq)))))
+            (map java-track->track (drop 1 (.getTracks java-seq)))))) ; drop first track
    
+;;; ****************************************************************
+
+;; FIXME duration can't be hard-coded multiplier)
+(defn note-duration-ms [duration-ticks] duration-ticks)
+
+(defn note-volume [note track-volume] track-volume)
 
 (defn play-note
-  [start-ms inst note volume]
-      (at (+ start-ms (:t note)) (-> (:note note) midi->hz (inst :volume volume))))
+  [start-ms inst note track-volume]
+  (at (+ start-ms (:t note))
+      (inst (midi->hz (:note note))
+            (note-duration-ms (:duration note))
+            (note-volume note track-volume))))
 
 (defn play-track
   [start-ms track volume]
-  (let [inst (:inst track)]
+  (let [inst (:instrument track)]
+    ;; TODO :t is in ticks, not milliseconds
     (dorun (map #(apply-at (+ start-ms (:t %)) #'play-note start-ms inst % volume) (:notes track)))))
 
 (defn play-song
   [song]
   (let [start-ms (+ (.getTime (java.util.Date.)) 500)
         track-vol (/ 1.0 (count (:tracks song)))]
+    (println "start-ms" start-ms "track-vol" track-vol) ; DEBUG
+    (println song)                                      ; DEBUG
     (dorun (map #(play-track start-ms % track-vol) (:tracks song)))))
+
+;;; ****************************************************************
+;;; Example
+
+(definst foo [freq 440 dur 1.0 volume 1.0]
+  (* volume
+     (env-gen (perc 0.1 dur) :action FREE)
+     (saw freq)))
+
+(def song (song-from-file "/Users/jimm/src/github/clojure/overtone-tutorial/midi/data/at_sea.midi"))
+
+;; TODO assign instruments to song; here we use hard-coded foo instrument
+(play-song (assoc song :tracks (map #(assoc % :instrument #'foo) (:tracks song)))))
