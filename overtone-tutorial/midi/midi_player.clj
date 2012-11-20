@@ -3,7 +3,10 @@
 
 (defrecord Song [ppqn bpm tracks])      ; for now, one tempo per song
 (defrecord Track [name events instrument])
+(defrecord Event [tick data])           ; data is vector of bytes
 (defrecord Note [tick midi-note duration velocity]) ; dur in ticks; created from note on/note off Event pairs
+
+(defn note? [event] (:midi-note event))
 
 ;;; ****************************************************************
 ;;; Reading a MIDI file
@@ -41,6 +44,10 @@
         (->Note tick midi-note (- (.getTick (.get java-track i)) tick) velocity)
         (recur (inc i))))))
 
+(defn event-from-java-event-at [java-track i]
+  (let [java-event (.get java-track i)]
+    (->Event (.getTick java-event) (vec (map #(bit-and % 0xff) (.. java-event getMessage getMessage))))))
+
 (defn java-track->track
   [java-track]
   (let [num-events (.size java-track)]
@@ -51,9 +58,9 @@
         (->Track name events nil)
         (recur (inc i)
                (or name (name-from-java-event java-track i))
-               (if (java-note-on-event? java-track i)
-                 (conj events (note-from-java-note-at java-track i))
-                 events))))))
+               (conj events (if (java-note-on-event? java-track i)
+                              (note-from-java-note-at java-track i)
+                              (event-from-java-event-at java-track i))))))))
 
 ;; first track contains tempo map
 (defn song-bpm [java-seq] 120)              ; TODO
@@ -82,17 +89,27 @@
      (/ (float (:velocity note)) 127.0)))
 
 (defn play-note
-  [start-ms inst note track-volume]
-  (at (+ start-ms (:tick note))
-      (inst (midi->hz (:midi-note note))
-            (note-duration-ms (:duration note))
-            (note-volume note track-volume))))
+  [start-ms inst event track-volume]
+  (at (+ start-ms (:tick event))
+      (inst (midi->hz (:midi-note event))
+            (note-duration-ms (:duration event))
+            (note-volume event track-volume))))
+
+(defn play-event
+  [start-ms inst event track-volume]
+  ;; I can't quite get multimethods working yet.
+  (when (note? event)
+    (play-note start-ms inst event track-volume)))
 
 (defn play-track
   [start-ms track volume]
   (let [inst (:instrument track)]
-    (dorun (map #(apply-at (+ start-ms (:tick %)) #'play-note start-ms inst % volume nil)
-                (:events track)))))
+    (dorun (map #(apply-at (+ start-ms (:tick %)) #'play-event start-ms inst % volume nil)
+                ; As an optimization, for now we filter out all but note
+                ; events. In the future when non-notes are playable (for
+                ; example volumn controller messages) we should remove this
+                ; filter.
+                (filter note? (:events track))))))
 
 (defn play-song
   [song]

@@ -9,6 +9,8 @@
 - Load raw messages
   - Except note off; add duration to note on message
 
+- Use raw Java Sequence with wrapper methods instead of defining records?
+
 * Limitations / Bugs
 
 - Does not calculate tempo at all; MIDI tick == milliseconds
