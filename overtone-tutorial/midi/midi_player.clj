@@ -1,6 +1,12 @@
-(defrecord Song [ppqn tracks])
+;;; ****************************************************************
+;;; Data types
+
+(defrecord Song [ppqn bpm meta-track tracks]) ; for now, one tempo per song
 (defrecord Track [name events instrument])
 (defrecord Note [tick midi-note duration velocity]) ; dur in ticks; created from note on/note off Event pairs
+
+;;; ****************************************************************
+;;; Reading a MIDI file
 
 (defn name-from-java-event [java-track i]
   (let [java-event (.get java-track i)
@@ -13,7 +19,7 @@
   (let [java-event (.get java-track i)
         msg (.. java-event getMessage getMessage)]
     (and (= 0x90 (bit-and (nth msg 0) 0xf0))
-         (not= 0 (nth msg 2)))))
+         (not (zero? (nth msg 2))))))
 
 (defn java-note-off-matching-event? [java-track i midi-note]
   (let [java-event (.get java-track i)
@@ -49,38 +55,50 @@
                  (conj events (note-from-java-note-at java-track i))
                  events))))))
 
+;; first track contains tempo map
+(defn song-bpm [java-seq] 120)              ; TODO
+  ;; (let [bpm (some (fn [track] (some (????)
+  ;;                                   (:events track)))
+  ;;                 (:tracks song))]
+  ;;   (or bpm 120)))
+
 (defn song-from-file
   [file]
-  (let [java-seq (javax.sound.midi.MidiSystem/getSequence (java.io.File. file))]
+  (let [java-seq (javax.sound.midi.MidiSystem/getSequence (java.io.File. file))
+        tracks (map java-track->track (.getTracks java-seq))]
     (->Song (.getResolution java-seq)
-            (map java-track->track (drop 1 (.getTracks java-seq)))))) ; drop first track
-   
+            (song-bpm java-seq)
+            (first tracks)
+            (rest tracks))))
+            
+
 ;;; ****************************************************************
+;;; Playing a song
 
 ;; FIXME duration can't be hard-coded multiplier)
-(defn note-duration-ms [duration-ticks] duration-ticks)
+(defn note-duration-ms [duration-ticks] (/ (float duration-ticks) 1000.0))
 
-(defn note-volume [note track-volume] track-volume)
+(defn note-volume [note track-volume]
+  (* track-volume
+     (/ (float (:velocity note)) 127.0)))
 
 (defn play-note
   [start-ms inst note track-volume]
-  (at (+ start-ms (:t note))
-      (inst (midi->hz (:note note))
+  (at (+ start-ms (:tick note))
+      (inst (midi->hz (:midi-note note))
             (note-duration-ms (:duration note))
             (note-volume note track-volume))))
 
 (defn play-track
   [start-ms track volume]
   (let [inst (:instrument track)]
-    ;; TODO :t is in ticks, not milliseconds
-    (dorun (map #(apply-at (+ start-ms (:t %)) #'play-note start-ms inst % volume) (:notes track)))))
+    (dorun (map #(apply-at (+ start-ms (:tick %)) #'play-note start-ms inst % volume nil)
+                (:events track)))))
 
 (defn play-song
   [song]
-  (let [start-ms (+ (.getTime (java.util.Date.)) 500)
+  (let [start-ms (+ (now) 500)
         track-vol (/ 1.0 (count (:tracks song)))]
-    (println "start-ms" start-ms "track-vol" track-vol) ; DEBUG
-    (println song)                                      ; DEBUG
     (dorun (map #(play-track start-ms % track-vol) (:tracks song)))))
 
 ;;; ****************************************************************
@@ -88,10 +106,15 @@
 
 (definst foo [freq 440 dur 1.0 volume 1.0]
   (* volume
-     (env-gen (perc 0.1 dur) :action FREE)
+     (env-gen (perc 0.15 dur) :action FREE)
      (saw freq)))
 
-(def song (song-from-file "/Users/jimm/src/github/clojure/overtone-tutorial/midi/data/at_sea.midi"))
+(def midi-file "/Users/jimm/src/github/clojure/overtone-tutorial/midi/data/at_sea.midi")
+(def midi-file "/Users/jimm/Documents/Dropbox/Music/Vision Sequences/Equal Rites/Main Theme.mid")
+(def song (song-from-file midi-file))
+
+(:name (:meta-track song))
+(map :name (:tracks song))
 
 ;; TODO assign instruments to song; here we use hard-coded foo instrument
-(play-song (assoc song :tracks (map #(assoc % :instrument #'foo) (:tracks song)))))
+(play-song (assoc song :tracks (map #(assoc % :instrument foo) (:tracks song))))
