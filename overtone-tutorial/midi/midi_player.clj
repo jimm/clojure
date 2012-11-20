@@ -1,7 +1,7 @@
 ;;; ****************************************************************
 ;;; Data types
 
-(defrecord Song [ppqn bpm meta-track tracks]) ; for now, one tempo per song
+(defrecord Song [ppqn bpm tracks])      ; for now, one tempo per song
 (defrecord Track [name events instrument])
 (defrecord Note [tick midi-note duration velocity]) ; dur in ticks; created from note on/note off Event pairs
 
@@ -68,8 +68,7 @@
         tracks (map java-track->track (.getTracks java-seq))]
     (->Song (.getResolution java-seq)
             (song-bpm java-seq)
-            (first tracks)
-            (rest tracks))))
+            tracks)))
             
 
 ;;; ****************************************************************
@@ -104,6 +103,7 @@
 ;;; ****************************************************************
 ;;; Example
 
+(comment
 (definst foo [freq 440 dur 1.0 volume 1.0]
   (* volume
      (env-gen (perc 0.15 dur) :action FREE)
@@ -113,8 +113,8 @@
 (def midi-file "/Users/jimm/Documents/Dropbox/Music/Vision Sequences/Equal Rites/Main Theme.mid")
 (def song (song-from-file midi-file))
 
-(:name (:meta-track song))
 (map :name (:tracks song))
 
 ;; TODO assign instruments to song; here we use hard-coded foo instrument
 (play-song (assoc song :tracks (map #(assoc % :instrument foo) (:tracks song))))
+)
