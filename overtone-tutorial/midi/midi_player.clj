@@ -88,28 +88,25 @@
   (* track-volume
      (/ (float (:velocity note)) 127.0)))
 
-(defn play-note
-  [start-ms inst event track-volume]
+(defmulti play-event (fn [event a b c] (class event)))
+
+(defmethod play-event Note
+  [event start-ms inst track-volume]
   (at (+ start-ms (:tick event))
       (inst (midi->hz (:midi-note event))
             (note-duration-ms (:duration event))
             (note-volume event track-volume))))
 
-(defn play-event
-  [start-ms inst event track-volume]
-  ;; I can't quite get multimethods working yet.
-  (when (note? event)
-    (play-note start-ms inst event track-volume)))
+(defmethod play-event Event
+  [event start-ms inst track-volume]
+  ;; nothing to do yet
+  )
 
 (defn play-track
   [start-ms track volume]
   (let [inst (:instrument track)]
-    (dorun (map #(apply-at (+ start-ms (:tick %)) #'play-event start-ms inst % volume nil)
-                ; As an optimization, for now we filter out all but note
-                ; events. In the future when non-notes are playable (for
-                ; example volumn controller messages) we should remove this
-                ; filter.
-                (filter note? (:events track))))))
+    (dorun (map #(apply-at (+ start-ms (:tick %)) #'play-event % start-ms inst volume nil)
+                (:events track)))))
 
 (defn play-song
   [song]
