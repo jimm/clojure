@@ -11,11 +11,13 @@
 ;;; ****************************************************************
 ;;; Reading a MIDI file
 
+(defn nth-byte [bytes n] (bit-and (nth bytes n) 0xff))
+
 (defn name-from-java-event [java-track i]
   (let [java-event (.get java-track i)
         msg (.. java-event getMessage getMessage)]
-    (and (= 0xff (bit-and (nth msg 0) 0xff))
-         (= 0x03 (bit-and (nth msg 1) 0xff))
+    (and (= 0xff (nth-byte msg 0))
+         (= 0x03 (nth-byte msg 1))
          (.trim (String. (byte-array (drop 3 msg)))))))
 
 (defn java-note-on-event? [java-track i]
@@ -28,17 +30,17 @@
   (let [java-event (.get java-track i)
         msg (.. java-event getMessage getMessage)]
     (or (and (= 0x80 (bit-and (nth msg 0) 0xf0)) ; note off message
-             (= midi-note (bit-and (nth msg 1) 0xff)))
+             (= midi-note (nth-byte msg 1)))
         (and (= 0x90 (bit-and (nth msg 0) 0xf0)) ; note on message, velocity 0
-             (= midi-note (bit-and (nth msg 1) 0xff))
+             (= midi-note (nth-byte msg 1))
              (= 0 (nth msg 2))))))
 
 (defn note-from-java-note-at [java-track i]
   (let [java-note-on (.get java-track i)
         tick (.getTick java-note-on)
         bytes (.. java-note-on getMessage getMessage)
-        midi-note (bit-and (nth bytes 1) 0xff)
-        velocity (bit-and (nth bytes 2) 0xff)]
+        midi-note (nth-byte bytes 1)
+        velocity (nth-byte bytes 2)]
     (loop [i (inc i)]
       (if (java-note-off-matching-event? java-track i midi-note)
         (->Note tick midi-note (- (.getTick (.get java-track i)) tick) velocity)
@@ -62,21 +64,45 @@
                               (note-from-java-note-at java-track i)
                               (event-from-java-event-at java-track i))))))))
 
-;; first track contains tempo map
-(defn song-bpm [java-seq] 120)              ; TODO
-  ;; (let [bpm (some (fn [track] (some (????)
-  ;;                                   (:events track)))
-  ;;                 (:tracks song))]
-  ;;   (or bpm 120)))
+(defn track-bpm
+  "Given a Track, return the first tempo event translated to BPM. If the
+  track has no tempo events, return 120."
+  [tempo-track]
+  (let [tempo-event (first (for [e (:events tempo-track)
+                                 :let [bytes (:data e)]
+                                 :when (and (= 0xff (nth-byte bytes 0))
+                                            (= 0x51 (nth-byte bytes 1)))]
+                             e))]
+    (if tempo-event
+      (let [bytes (:data tempo-event)
+            microseconds-per-beat->bpm (fn [mpb] (/ 60000000 mpb))]
+        (microseconds-per-beat->bpm
+         (+ (bit-shift-left (nth-byte bytes 3) 16)
+            (bit-shift-left (nth-byte bytes 4) 8)
+                            (nth-byte bytes 5))))
+      120)))
 
 (defn song-from-file
   [file]
   (let [java-seq (javax.sound.midi.MidiSystem/getSequence (java.io.File. file))
         tracks (map java-track->track (.getTracks java-seq))]
     (->Song (.getResolution java-seq)
-            (song-bpm java-seq)
+            (track-bpm (first tracks))
             tracks)))
-            
+
+;;; TODO write a function that extracts separate notes in a track
+;;; (presumably a drum track) into separate Tracks, perhaps returning a map
+;;; from MIDI note or GM drum name or something to track.
+
+;;; ****************************************************************
+;;; Assigning Overtone instruments to tracks
+
+(defn song-with-instruments
+  "Returns a song where each track that has a name in track-inst-map is
+  assigned to the corresponding instrument."
+  [song track-inst-map]
+  (assoc song :tracks (map #(assoc % :instrument (get track-inst-map (:name %)))
+                           (:tracks song))))
 
 ;;; ****************************************************************
 ;;; Playing a song
@@ -129,6 +155,21 @@
 
 (map :name (:tracks song))
 
-;; TODO assign instruments to song; here we use hard-coded foo instrument
+;; Here we use hard-coded foo instrument. See also song-with-instruments.
 (play-song (assoc song :tracks (map #(assoc % :instrument foo) (:tracks song))))
+
+;; TODO write all these instruments. You know: the hard part.
+(def midi-file "/Users/jimm/src/github/midilib/examples/NoFences.mid")
+(def song (song-from-file midi-file))
+(def track-inst-map {"Drums" drumkit
+                     "Bass" bass1
+                     "Bass Copy" bass2
+                     "Piano & Strings" piano-and-strings
+                     "Brass" brass
+                     "Organ Melody" organ
+                     "Piano Solo" piano
+                     "Picky Guitar" picky-guitar
+                     "Big Jupiter" big-jupiter
+                     "Saxes" saxes})
+(play-song (song-with-instruments song track-inst-map))
 )
