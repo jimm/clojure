@@ -155,7 +155,9 @@
 
 (map :name (:tracks song))
 
-;; Here we use hard-coded foo instrument. See also song-with-instruments.
+;; Create a map of track names to the single instrument "foo".
+(apply hash-map (flatten (map #(list (:name %) foo)
+                              (drop 1 (:tracks song)))))
 (play-song (assoc song :tracks (map #(assoc % :instrument foo) (:tracks song))))
 
 ;; TODO write all these instruments. You know: the hard part.
