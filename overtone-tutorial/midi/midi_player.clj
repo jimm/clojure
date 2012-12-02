@@ -1,12 +1,12 @@
+;;; TODO do I need to bit-and with 0xff once in the Event/Note records?
+
 ;;; ****************************************************************
 ;;; Data types
 
-(defrecord Song [ppqn bpm tracks])      ; for now, one tempo per song
+(defrecord Song [name ppqn bpm tracks]) ; for now, one tempo per song
 (defrecord Track [name events instrument])
 (defrecord Event [tick data])           ; data is vector of bytes
 (defrecord Note [tick midi-note duration velocity]) ; dur in ticks; created from note on/note off Event pairs
-
-(defn note? [event] (:midi-note event))
 
 ;;; ****************************************************************
 ;;; Reading a MIDI file
@@ -68,15 +68,13 @@
   "Given a Track, return the first tempo event translated to BPM. If the
   track has no tempo events, return 120."
   [tempo-track]
-  (let [tempo-event (first (for [e (:events tempo-track)
-                                 :let [bytes (:data e)]
-                                 :when (and (= 0xff (nth-byte bytes 0))
-                                            (= 0x51 (nth-byte bytes 1)))]
-                             e))]
-    (if tempo-event
+  (letfn [(tempo-event? [bytes]
+            (and (= 0xff (nth-byte bytes 0))
+                 (= 0x51 (nth-byte bytes 1))))]
+    (if-let [tempo-event (first (filter #(tempo-event? (:data %)) (:events tempo-track)))]
       (let [bytes (:data tempo-event)
-            microseconds-per-beat->bpm (fn [mpb] (/ 60000000 mpb))]
-        (microseconds-per-beat->bpm
+            usecs-per-beat->bpm (fn [mpb] (/ 60000000 mpb))]
+        (usecs-per-beat->bpm
          (+ (bit-shift-left (nth-byte bytes 3) 16)
             (bit-shift-left (nth-byte bytes 4) 8)
                             (nth-byte bytes 5))))
@@ -86,13 +84,37 @@
   [file]
   (let [java-seq (javax.sound.midi.MidiSystem/getSequence (java.io.File. file))
         tracks (map java-track->track (.getTracks java-seq))]
-    (->Song (.getResolution java-seq)
+    (->Song (:name (first tracks))
+            (.getResolution java-seq)
             (track-bpm (first tracks))
             tracks)))
 
-;;; TODO write a function that extracts separate notes in a track
+;;; TODO write a function that extracts separate notes in a Track
 ;;; (presumably a drum track) into separate Tracks, perhaps returning a map
 ;;; from MIDI note or GM drum name or something to track.
+;;;
+;;; The first track returned contains all non-note events
+(defn track-per-note
+  "Extracts separate notes in a track (presumably a drum track) into separate
+   tracks and returns a seq whose first element is a track containing all
+   non-note events and remaining elements are tracks, one per note number."
+  [track]
+  (let [tname (:name track)
+        [nnes nmap] (loop [events (:events track)
+                           non-note-events []
+                           note-map {}]
+                      (let [e (first events)]
+                        (cond (nil? events) (list non-note-events note-map)
+                              (= (class e) Note) (let [note (:midi-note e)]
+                                                   (recur (next events)
+                                                          non-note-events
+                                                          (assoc note-map note (if (get note-map note)
+                                                                                 (conj (get note-map note) e)
+                                                                                 (list e)))))
+                              :else (recur (next events) (conj non-note-events e) note-map))))]
+    (flatten (list (->Track (str tname " " "Non-Note Events") nnes nil)
+                   (map #(->Track (str tname " " "Note " (first %) " Events") (second %) nil) nmap)))))
+             
 
 ;;; ****************************************************************
 ;;; Assigning Overtone instruments to tracks
@@ -158,7 +180,11 @@
 ;; Create a map of track names to the single instrument "foo".
 (apply hash-map (flatten (map #(list (:name %) foo)
                               (drop 1 (:tracks song)))))
-(play-song (assoc song :tracks (map #(assoc % :instrument foo) (:tracks song))))
+
+(play-song (song-with-instruments song (zipmap (drop 1 (map :name (:tracks song)))
+                                               (repeat foo))))
+
+(assoc song :tracks (map #(assoc % :instrument foo) (:tracks song))))
 
 ;; TODO write all these instruments. You know: the hard part.
 (def midi-file "/Users/jimm/src/github/midilib/examples/NoFences.mid")
