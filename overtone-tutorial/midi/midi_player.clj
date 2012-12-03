@@ -114,7 +114,24 @@
                               :else (recur (next events) (conj non-note-events e) note-map))))]
     (flatten (list (->Track (str tname " " "Non-Note Events") nnes nil)
                    (map #(->Track (str tname " " "Note " (first %) " Events") (second %) nil) nmap)))))
-             
+
+(defn separate-drum-tracks
+  "Given a song and a track in that song, replace the track with the tracks
+  returned by track-per-note. (If track is not in song this will still
+  work.)"
+  [song track]
+  (let [ts (:tracks song)
+        new-tracks (track-per-note track)]
+    (assoc song :tracks (flatten (if (some #{track} song)
+                                   (replace {track new-tracks} ts)
+                                   (conj ts new-tracks))))))
+
+;;; ****************************************************************
+;;; Finding tracks in a song
+
+(defn track-named
+  [song name]
+  (first (filter #(= (:name %) name) (:tracks song))))
 
 ;;; ****************************************************************
 ;;; Assigning Overtone instruments to tracks
