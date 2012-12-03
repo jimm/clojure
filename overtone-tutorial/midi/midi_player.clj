@@ -1,5 +1,3 @@
-;;; TODO do I need to bit-and with 0xff once in the Event/Note records?
-
 ;;; ****************************************************************
 ;;; Data types
 
@@ -7,6 +5,7 @@
 (defrecord Track [name events instrument])
 (defrecord Event [tick data])           ; data is vector of bytes
 (defrecord Note [tick midi-note duration velocity]) ; dur in ticks; created from note on/note off Event pairs
+(defrecord Controller [tick cc val])
 
 ;;; ****************************************************************
 ;;; Reading a MIDI file
@@ -26,6 +25,13 @@
     (and (= 0x90 (bit-and (nth msg 0) 0xf0))
          (not (zero? (nth msg 2))))))
 
+(defn java-note-off-or-note-on-0-event? [java-track i]
+  (let [java-event (.get java-track i)
+        msg (.. java-event getMessage getMessage)
+        status (bit-and (nth msg 0) 0xf0)]
+    (or (= 0x80 status)
+        (and (= 0x90 status) (= 0 (nth msg 2))))))
+
 (defn java-note-off-matching-event? [java-track i midi-note]
   (let [java-event (.get java-track i)
         msg (.. java-event getMessage getMessage)]
@@ -35,10 +41,15 @@
              (= midi-note (nth-byte msg 1))
              (= 0 (nth msg 2))))))
 
+(defn java-controller-event? [java-track i]
+  (let [java-event (.get java-track i)
+        msg (.. java-event getMessage getMessage)]
+    (= 0xb0 (bit-and (nth msg 0) 0xf0))))
+
 (defn note-from-java-note-at [java-track i]
-  (let [java-note-on (.get java-track i)
-        tick (.getTick java-note-on)
-        bytes (.. java-note-on getMessage getMessage)
+  (let [java-event (.get java-track i)
+        tick (.getTick java-event)
+        bytes (.. java-event getMessage getMessage)
         midi-note (nth-byte bytes 1)
         velocity (nth-byte bytes 2)]
     (loop [i (inc i)]
@@ -50,6 +61,12 @@
   (let [java-event (.get java-track i)]
     (->Event (.getTick java-event) (vec (map #(bit-and % 0xff) (.. java-event getMessage getMessage))))))
 
+(defn controller-from-java-controller-at [java-track i]
+  (let [java-event (.get java-track i)
+        tick (.getTick java-event)
+        bytes (.. java-event getMessage getMessage)]
+    (->Controller tick (nth-byte bytes 1) (nth-byte bytes 2))))
+
 (defn java-track->track
   [java-track]
   (let [num-events (.size java-track)]
@@ -60,9 +77,10 @@
         (->Track name events nil)
         (recur (inc i)
                (or name (name-from-java-event java-track i))
-               (conj events (if (java-note-on-event? java-track i)
-                              (note-from-java-note-at java-track i)
-                              (event-from-java-event-at java-track i))))))))
+               (cond (java-note-on-event? java-track i) (conj events (note-from-java-note-at java-track i))
+                     (java-note-off-or-note-on-0-event? java-track i) events
+                     (java-controller-event? java-track i) events (conj events (controller-from-java-controller-at java-track i))
+                     :else (event-from-java-event-at java-track i)))))))
 
 (defn track-bpm
   "Given a Track, return the first tempo event translated to BPM. If the
@@ -161,6 +179,13 @@
       (inst (midi->hz (:midi-note event))
             (note-duration-ms (:duration event))
             (note-volume event track-volume))))
+
+;;; TODO make a way to use a function associated somehow with an instrument
+;;; so controller signals can be modified.
+(defmethod play-event Controller
+  [event start-ms inst track-volume]
+  ;; nothing to do yet
+  )
 
 (defmethod play-event Event
   [event start-ms inst track-volume]

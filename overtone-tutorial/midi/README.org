@@ -1,0 +1,67 @@
+* MIDI Player
+
+This code contains a MIDI file reader that extracts a Song from a MIDI file
+and code that can play that Song using Overtone instruments.
+
+** Reading a MIDI file
+
+Reading a MIDI file and creating a song is as simple as calling
+#+begin_src clojure
+  (song-from-file "/path/to/file.mid")
+#+end_src
+
+** Overtone Instruments
+
+Associating Overtone instruments with tracks can be done by making a map of
+track names to instruments. Calling =song-with-instruments= with that map
+associates the instruments with the corresponding tracks.
+
+To see the names of the tracks in a song, you can use
+#+begin_src clojure
+  (map :name (:tracks song))
+#+end_src
+
+To give instruments to tracks, call
+#+begin_src clojure
+  (song-with-instruments song {"Track 1" inst1 "Track 2" inst2})
+#+end_src
+
+** Playing the Song
+
+To play a song, call -=play-song=.
+#+begin_src clojure
+  (play-song song)
+#+end_src
+
+** Drum Tracks
+
+Often you'll want to associate a different instrument with each note in a
+drum track (one note for kick, one for snare, etc.). The function
+=separate-drum-tracks= takes a song and a track and returns a song with
+multiple new tracks, one per note in the track and one extra for all the
+non-note events in the track (for example, controller messages). If the
+original track was in the song, it is removed.
+
+To find your drum track, you can use =track-named=.
+
+This code returns a song with the "Drums" track replaced by multiple tracks.
+#+begin_src clojure
+  (separate-drum-tracks song (track-named "Drums"))
+#+end_src
+
+* BUGS
+
+- Since we are ignoring MIDI channel, the code that finds the note off of a
+  note on message will only work if there is only one channel in a track.
+
+- I think note off events are being added as Event records, instead of being
+  eaten. This means they're in a track twice, once implicitly as part of the
+  Note and once explicitly.
+
+* To Do
+
+- Add MIDI channel to Events and Notes.
+
+- Make a way to associate instruments with MIDI channels within a track.
+
+- Probably want more event types than just Note and Event.

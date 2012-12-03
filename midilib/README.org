@@ -1,0 +1,8 @@
+All this code is kind of unnecessary, since Java comes with the
+javax.sounds.midi.MidiSystem package already. See
+../overtone-tutorial/midi/midi_player.clj for code that uses that package to
+parse a MIDI file and creates Song/Track/Event records. That code ignores
+MIDI channel, but it would be easly to add channel to each Event.
+
+This code is still worthwhile because it distinguishes between the different
+kinds of events and that other code doesn't yet do that. But it will.
