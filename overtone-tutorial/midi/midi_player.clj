@@ -3,9 +3,34 @@
 
 (defrecord Song [name ppqn bpm tracks]) ; for now, one tempo per song
 (defrecord Track [name events instrument])
-(defrecord Event [tick data])           ; data is vector of bytes
-(defrecord Note [tick midi-note duration velocity]) ; dur in ticks; created from note on/note off Event pairs
-(defrecord Controller [tick cc val])
+
+(defprotocol Playable
+  (play [this ti inst track-volume] "Plays event."))
+
+(defrecord Event [tick data]           ; data is vector of bytes
+  Playable
+  (play [this ti inst track-volume]
+        ))
+
+(defrecord Note [tick midi-note duration velocity] ; dur in ticks; created from note on/note off Event pairs
+  Playable
+  (play [this ti inst track-volume]
+    (letfn [(duration-ms [duration-ticks] (/ (* (:msecs-per-tick ti) duration-ticks) 1000))
+            (volume [note track-volume]
+                         (* track-volume
+                            (/ (float (:velocity note)) 127.0)))]
+      (at (:t ti) (inst :freq (midi->hz (:midi-note this))
+                        :dur (duration-ms (:duration this))
+                        :vol (volume this track-volume))))))
+
+(defrecord Controller [tick cc val]
+  Playable
+  (play [this ti inst track-volume]
+        ))
+
+(defrecord TimeInfo [start-ms           ; start millisecs for entire track
+                     msecs-per-tick     ; millisecs per tick
+                     t])                ; pre-computed time for an event
 
 ;;; ****************************************************************
 ;;; Reading a MIDI file
@@ -91,7 +116,7 @@
                  (= 0x51 (nth-byte bytes 1))))]
     (if-let [tempo-event (first (filter #(tempo-event? (:data %)) (:events tempo-track)))]
       (let [bytes (:data tempo-event)
-            usecs-per-beat->bpm (fn [mpb] (/ 60000000 mpb))]
+            usecs-per-beat->bpm (fn [upb] (/ 60000000 upb))]
         (usecs-per-beat->bpm
          (+ (bit-shift-left (nth-byte bytes 3) 16)
             (bit-shift-left (nth-byte bytes 4) 8)
@@ -151,9 +176,9 @@
   [song name]
   (first (filter #(= (:name %) name) (:tracks song))))
 
-(defn usecs-per-tick
+(defn msecs-per-tick
   [song]
-  (int (* 60 1000 (/ 1 (:bpm song)))))
+  (/ 60000 (:bpm song) (:ppqn song)))
 
 ;;; ****************************************************************
 ;;; Assigning Overtone instruments to tracks
@@ -168,56 +193,30 @@
 ;;; ****************************************************************
 ;;; Playing a song
 
-(defn abs-time-ms [start-ms usecs-per-tick ticks] (+ start-ms (* usecs-per-tick ticks)))
-
-(defn note-duration-ms [usecs-per-tick duration-ticks] (* usecs-per-tick duration-ticks))
-
-(defn note-volume [note track-volume]
-  (* track-volume
-     (/ (float (:velocity note)) 127.0)))
-
-(defmulti play-event (fn [event start-ms usecs-per-tick inst track-folume] (class event)))
-
-(defmethod play-event Note
-  [event start-ms usecs-per-tick inst track-volume]
-  (println "note at" "(abs-time-ms start-ms usecs-per-tick (:tick event))" (abs-time-ms start-ms usecs-per-tick (:tick event))) ; DEBUG
-  (at (abs-time-ms start-ms usecs-per-tick (:tick event))
-      (inst (midi->hz (:midi-note event))
-            (note-duration-ms (:duration event))
-            (note-volume event track-volume))))
-
-;;; TODO make a way to use a function associated somehow with an instrument
-;;; so controller signals can be modified.
-(defmethod play-event Controller
-  [event start-ms usecs-per-tick inst track-volume]
-  ;; nothing to do yet
-  )
-
-(defmethod play-event Event
-  [event start-ms usecs-per-tick inst track-volume]
-  ;; nothing to do yet
-  )
+(defn abs-time-ms [start-ms msecs-per-tick ticks] (long (+ start-ms (* msecs-per-tick ticks))))
 
 (defn play-track
-  [start-ms usecs-per-tick track volume]
+  [start-ms msecs-per-tick track volume]
   (when-let [inst (:instrument track)]
-    (dorun (map #(apply-at (abs-time-ms start-ms usecs-per-tick (:tick %))
-                           #'play-event % start-ms usecs-per-tick inst volume nil)
+    (dorun (map #(let [ti (->TimeInfo start-ms msecs-per-tick (abs-time-ms start-ms msecs-per-tick (:tick %)))]
+                   (apply-at (:t ti) #'play % ti inst volume nil))
                 (:events track)))))
 
 (defn play-song
   [song]
   (let [start-ms (+ (now) 50)
         track-vol (/ 1.0 (count (:tracks song)))]
-    (println "start-ms" start-ms)       ; DEBUG
-    (dorun (map #(play-track start-ms (usecs-per-tick song) % track-vol) (:tracks song)))))
+    (dorun (map #(play-track start-ms (msecs-per-tick song) % track-vol) (:tracks song)))))
 
 ;;; ****************************************************************
 ;;; Example
 
 (comment
-(definst foo [freq 440 dur 1.0 volume 1.0]
-  (* volume
+
+(set! *print-length* 10)
+
+(definst foo [freq 440 dur 1.0 vol 1.0]
+  (* vol
      (env-gen (perc 0.15 dur) :action FREE)
      (saw freq)))
 
@@ -228,13 +227,13 @@
 (map :name (:tracks song))
 
 ;; Create a map of track names to the single instrument "foo".
-(apply hash-map (flatten (map #(list (:name %) foo)
-                              (drop 1 (:tracks song)))))
+(zipmap (drop 1 (map :name (:tracks song)))
+        (repeat foo))
 
-(play-song (song-with-instruments song (zipmap (drop 1 (map :name (:tracks song)))
-                                               (repeat foo))))
+(def swi (song-with-instruments song (zipmap (drop 1 (map :name (:tracks song)))
+                                             (repeat foo))))
 
-(assoc song :tracks (map #(assoc % :instrument foo) (:tracks song)))
+(play-song swi)
 
 ;; TODO write all these instruments. You know: the hard part.
 (def midi-file "/Users/jimm/src/github/midilib/examples/NoFences.mid")
