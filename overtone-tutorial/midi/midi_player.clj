@@ -4,6 +4,10 @@
 (defrecord Song [name ppqn bpm tracks]) ; for now, one tempo per song
 (defrecord Track [name events instrument])
 
+;;; Should this protocol be here, or abstracted out so that these MIDI data
+;;; record types aren't tied to it so directly, making it more useful for
+;;; non-Overtone code?
+
 (defprotocol Playable
   (play [this ti inst track-volume] "Plays event."))
 
