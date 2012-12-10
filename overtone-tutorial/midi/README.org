@@ -3,6 +3,11 @@
 This code contains a MIDI file reader that extracts a Song from a MIDI file
 and code that can play that Song using Overtone instruments.
 
+** Use
+
+I haven't yet bothered with namespaces or use/require. Load midifile.clj
+first, then load midi_player.clj.
+
 ** Reading a MIDI file
 
 Reading a MIDI file and creating a song is as simple as calling
