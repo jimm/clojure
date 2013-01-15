@@ -3,7 +3,13 @@
 ;;; NOTE: don't need to run SuperCollider because Overtone has the synth
 ;;; engine packaged as a library, along with minimal JNA interface.
 
+;; For use in Emacs
 (use 'overtone.live)
+
+;; For use in Light Table or elsewhere
+(ns jimm.overtone
+  (:use overtone.live))
+
 ;;; The next two are not needed if you're using the the built-in SC server
 ;;; that comes with Overtone.
 ;; (boot-external-server)                  ; does this work? need to click "boot" in SC instead?
