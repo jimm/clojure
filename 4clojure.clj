@@ -3352,8 +3352,11 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; (1) Of course, we can consider sequences instead of vectors. 
 ;; (2) Length of a vector is the number of elements in the vector.
 
-;;; Correct but too slow. Times out on 4clojure.com. This is the expanded
-;;; version. The submittable version is below.
+;;; Correct but too slow. Times out on 4clojure.com, but now only on the
+;;; last one.
+
+;;; This is the expanded version. The submittable version is
+;;; below.
 
 ;; For debugging only
 (def v [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]])
