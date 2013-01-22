@@ -3352,8 +3352,13 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;; (1) Of course, we can consider sequences instead of vectors. 
 ;; (2) Length of a vector is the number of elements in the vector.
 
-;;; Correct but too slow. Times out on 4clojure.com, but now only on the
-;;; last one.
+;;; The solution below is correct but too slow. The last example times out
+;;; on 4clojure.com (they used to all time out; perhaps the test server has
+;;; increased the timeout time.)
+;;;
+;;; Idea: if only moving one row then that doesn't affect any squares that
+;;; don't have that row in it already. Cache answers where map == row
+;;; [starts, offsets].
 
 ;;; This is the expanded version. The submittable version is
 ;;; below.
@@ -3393,6 +3398,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
    (partition (count coll) (flatten (do-combis coll '())))))
 
 (defn alignments
+  ;; Returns vector of alignments (see definition of alignment).
   [v maxlen]
   (let [offsets (for [row v] (range (- maxlen (dec (count row)))))] ; all possible offsets
     (loop [row-offset-combis (combis offsets)
