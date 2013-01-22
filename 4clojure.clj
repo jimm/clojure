@@ -3410,8 +3410,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
     (if (nil? rows)
       square
       (let [square-row (subvec (first rows) col (+ col size))]
-        (if (not (and (first square-row) (last square-row)))
-          nil                           ; bail early
+        (when (and (first square-row) (last square-row))
           (recur (next rows) (conj square square-row)))))))
 
 (defn rows-and-cols
@@ -3492,8 +3491,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                   (if (nil? rows)
                     square
                     (let [square-row (subvec (first rows) col (+ col size))]
-                      (if (not (and (first square-row) (last square-row)))
-                        nil             ; bail early
+                      (when (and (first square-row) (last square-row))
                         (recur (next rows) (conj square square-row)))))))
                (rows-and-cols
                 [size]
@@ -3519,6 +3517,11 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                                square)]
            (frequencies (map (comp count first) (set latin-squares))))))
 )
+
+;; Only this one is too slow now
+(time
+ (= (__ [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]])
+    {4 1, 3 1, 2 7}))
 
 (and
  (= (__ '[[A B C D]
