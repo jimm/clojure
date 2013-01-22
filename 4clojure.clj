@@ -3367,8 +3367,8 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 (def v [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]])
 
 (defn alignment
-  ;; returns seq of seqs with nils at beginning and end of
-  ;; rows that are offset
+  "Returns seq of seqs with nils at beginning and end of rows that are
+  offset."
   [v maxlen row-offsets]                ; one offset for each row
   (loop [rows v
          offsets row-offsets
@@ -3383,10 +3383,9 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                                                    (repeat nil)))))))))
 
 (defn combis
- ;; Given a list of lists of numbers, return a list whose
- ;; elements are all the ordered combitations of coll. So
- ;; for example turns '((0 1 2) (0) (0 1))) into
- ;; '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1)).
+ "Given a list of lists of numbers, return a list whose elements are all the
+ ordered combitations of coll. So for example turns '((0 1 2) (0) (0 1)))
+ into '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1))."
  [coll]
  (letfn [(do-combis
           [coll prev]
@@ -3398,7 +3397,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
    (partition (count coll) (flatten (do-combis coll '())))))
 
 (defn alignments
-  ;; Returns vector of alignments (see definition of alignment).
+  "Returns vector of alignments (see definition of alignment)."
   [v maxlen]
   (let [offsets (for [row v] (range (- maxlen (dec (count row)))))] ; all possible offsets
     (loop [row-offset-combis (combis offsets)
@@ -3409,7 +3408,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                (conj as (vec (alignment v maxlen (first row-offset-combis)))))))))
 
 (defn square-at
-  ;; Returns nil if square contains nil
+  "Returns nil if square contains nil."
   [alignment row col size]
   (loop [rows (subvec alignment row (+ row size))
          square []]
