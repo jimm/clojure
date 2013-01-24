@@ -3385,10 +3385,10 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                                                            (take (- maxlen (first offsets) (count (first rows)))
                                                                  (repeat nil)))))))))
                (combis
-                ;; Given a list of lists of numbers, return a list whose
-                ;; elements are all the ordered combitations of coll. So
-                ;; for example turns '((0 1 2) (0) (0 1))) into
-                ;; '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1)).
+                 ;; Given a list of lists of numbers, return a list whose
+                 ;; elements are all the ordered combitations of coll. For
+                 ;; example '((0 1 2) (0) (0 1))) turns into
+                 ;; '((0 0 0) (0 0 1) (1 0 0) (1 0 1) (2 0 0) (2 0 1)).
                 [coll]
                 (letfn [(do-combis
                          [coll prev]
@@ -3430,14 +3430,15 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
                                            flattened-square)]
                       (and (apply distinct? (map first rs-cs-pairs))
                            (apply distinct? (map second rs-cs-pairs)))))))]
-         (let [num-rows (count v)
+         (let [m-latin-square? (memoize latin-square?)
+               num-rows (count v)
                maxlen (apply max (map count v))
                latin-squares (for [alignment (alignments v maxlen)
                                    row (range (dec num-rows))
                                    col (range (dec maxlen))
                                    size (range 2 (min (inc (- num-rows row)) (inc (- maxlen col))))
                                    :let [square (square-at alignment row col size)]
-                                   :when (and square (latin-square? square size))]
+                                   :when (and square (m-latin-square? square size))]
                                square)]
            (frequencies (map (comp count first) (set latin-squares))))))
 )
