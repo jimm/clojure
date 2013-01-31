@@ -1,14 +1,15 @@
 (ns ircbot)
 
-(def *sigfile* (str (System/getenv "PIM") "/signatures"))
 (def irc-sigs (ref nil))
+(def irc-sigs-count (ref 0))
 
 (def *default-settings* {
      :server "irc.freenode.net"
      :port 6667
      :nick "jimm-test-bot"
      :channel "#jimm-test"
-     :full-name "Jimm Bot"})
+     :full-name "Jimm Bot"
+     :sigfile (str (System/getenv "pim") "/signatures")})
 
 (defn irc-send
   "Send a message to the IRC server and print it to the screen."
@@ -25,11 +26,13 @@
      (java.io.PrintWriter. (.getOutputStream s))]))
 
 (defn irc-signature
-  []
+  [file]
   (dosync
    (when-not @irc-sigs
-     (ref-set irc-sigs (.split (slurp *sigfile*) "\\n\\n")))
-   (nth @irc-sigs (rand-int (count @irc-sigs)))))
+     (let [sigs (.split (slurp file) "\\n\\n")]
+       (ref-set irc-sigs sigs)
+       (ref-set irc-sigs-count (count sigs))))
+   (nth @irc-sigs (rand-int @irc-sigs-count))))
 
 (defn irc-message-to-me
   [settings out from user host to text]
@@ -42,7 +45,7 @@
      (= "quit" verb)
        (irc-send out "QUIT :Goodbye")
      (or (= "sig" verb) (= "signature" verb))
-       (irc-send out (str "PRIVMSG " reply-to " :" (.replaceAll (irc-signature) "[\\r\\n]" " ")))
+       (irc-send out (str "PRIVMSG " reply-to " :" (.replaceAll (irc-signature (:sigfile settings)) "[\\r\\n]" " ")))
      true
        (println text))))
 
@@ -77,10 +80,9 @@
 
 (defn irc-main-loop
   [settings out]
-  (if-let [line (read-line)]
-    (do
-      (handle-server-input settings out line)
-      (recur settings out))))
+  (when-let [line (read-line)]
+    (handle-server-input settings out line)
+    (recur settings out)))
 
 (defn irc-connect
   [{:keys [server port nick full-name channel]}]
