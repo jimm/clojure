@@ -3380,6 +3380,17 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/140
+;;;
+;;; Create a function which accepts as input a boolean algebra function in
+;;; the form of a set of sets, where the inner sets are collections of
+;;; symbols corresponding to the input boolean variables which satisfy the
+;;; function (the inputs of the inner sets are conjoint, and the sets
+;;; themselves are disjoint... also known as canonical minterms). Note:
+;;; capitalized symbols represent truth, and lower-case symbols represent
+;;; negation of the inputs. Your function must return the minimal function
+;;; which is logically equivalent to the input.
+;;;
+;;; See http://webdocs.cs.ualberta.ca/~amaral/courses/329/webslides/Topic5-QuineMcCluskey/sld007.htm
 
 (defn char-to-power-of-2 [c num-bits]
   (let [diff (- (int c) (int \A))
@@ -3399,7 +3410,17 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
   (let [num-bits (count s)]
     (reduce + (map #(sym-to-power-of-2 % num-bits) s))))
 
-(def gray-codes {2 [0 1 3 2], 3 [0 1 3 2 6 7 5 4], 4 [0 1 3 2 6 7 5 4 12 13 15 14 10 11 9 8]})
+(defn minterm-bits [s]
+  (let [num-bits (count s)]
+    (map #(
+
+;; (defn gray-codes [n]
+;;   (loop [n n
+;;          codes (list "0" "1")]          ; binary numbers as strings
+;;     (cond (< n 2) (map #(Integer/parseInt % 2) codes) ; binary # strings to ints
+;;           :else (recur (dec n)
+;;                        (concat (map #(str "0" %) codes)
+;;                                (map #(str "1" %) (reverse codes)))))))
 
 ;; (defn k-map [ss]
 ;;   (let [num-bits (count ss)
@@ -3414,21 +3435,6 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
   )
 
 (and
- ;; Create a function which accepts as input a boolean algebra function in
- ;; the form of a set of sets, where the inner sets are collections of
- ;; symbols corresponding to the input boolean variables which satisfy the
- ;; function (the inputs of the inner sets are conjoint, and the sets
- ;; themselves are disjoint... also known as canonical minterms). Note:
- ;; capitalized symbols represent truth, and lower-case symbols represent
- ;; negation of the inputs. Your function must return the minimal function
- ;; which is logically equivalent to the input.
- ;;
- ;; PS --- You may want to give this a read before proceeding: <a
- ;; href="http://en.wikipedia.org/wiki/K_map">K-Maps</a>
- ;;
- ;; PPS --- If you're interested in logic programming more generally, you
- ;; should also check out: <a
- ;; href="https://github.com/clojure/core.logic">core.logic</a>
  (= (__ #{#{'a 'B 'C 'd}
          #{'A 'b 'c 'd}
          #{'A 'b 'c 'D}
