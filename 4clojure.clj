@@ -3392,27 +3392,66 @@
 ;;;
 ;;; See http://webdocs.cs.ualberta.ca/~amaral/courses/329/webslides/Topic5-QuineMcCluskey/sld007.htm
 
-(defn char-to-power-of-2 [c num-bits]
+(defn char-to-power-of-2
+  [c num-bits]
   (let [diff (- (int c) (int \A))
         pos (dec (- num-bits diff))]
   (int (Math/pow 2 pos))))
 
-(defn sym-to-power-of-2 [sym num-bits]
+(defn sym-to-power-of-2
+  [sym num-bits]
   (let [c (first (str sym))]
     (if (Character/isUpperCase c)
       (char-to-power-of-2 c num-bits)
       0)))
 
-(defn func-input-value [s]
-  "Given a set of input symbols, return the single value that corresponds to
-1 bits where symbols are true and 0 bits where symbols are false. Assumes
-symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
-  (let [num-bits (count s)]
-    (reduce + (map #(sym-to-power-of-2 % num-bits) s))))
+(defn int-to-bits
+  [n num-bits]
+  (loop [n n
+         num-bits num-bits
+         reversed-bits []]
+    (if (zero? num-bits)
+      (reverse reversed-bits)
+      (recur (bit-shift-right n 1)
+             (dec num-bits)
+             (conj reversed-bits (bit-and n 1))))))
 
-(defn minterm-bits [s]
+(defn func-input-values
+  "Given a set of input symbols, return the single number that corresponds
+to 1 bits where symbols are true and 0 bits where symbols are false. Assumes
+symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
+  [s]
   (let [num-bits (count s)]
-    (map #(
+    (int-to-bits (reduce + (map #(sym-to-power-of-2 % num-bits) s)) num-bits)))
+  
+(defn minterm-vecs
+  [coll]
+  (map func-input-values coll))
+
+(defn num-ones
+  [bits]
+  (count (filter #(and % (pos? %)) bits)))
+
+(defn adjacent-pairs
+  [coll]                                ; assumes coll is sorted
+  (loop [nums coll
+         pairs ()]
+    (if (< (count nums) 2)
+      pairs
+      (let [n1 (first nums), n2 (second nums)]
+        (if (= (inc n1) n2)
+          (recur (next nums) (conj pairs (list n1 n2)))
+          (recur (next nums) pairs))))))
+
+(defn find-prime-implicants
+  [groups adj-group-keys]
+  (mapcat (fn [[k1 k2]]
+            (for [term1 (get groups k1)
+                  term2 (get groups k2)
+                  :let [diff (map #(if (= %1 %2) %1 nil) term1 term2)]
+                  :when (= 1 (count (filter nil? diff)))]
+              diff))
+          adj-group-keys))
 
 ;; (defn gray-codes [n]
 ;;   (loop [n n
@@ -3422,17 +3461,36 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 ;;                        (concat (map #(str "0" %) codes)
 ;;                                (map #(str "1" %) (reverse codes)))))))
 
-;; (defn k-map [ss]
-;;   (let [num-bits (count ss)
-;;         gray-code (get gray-codes num-bits)
-;;         true-inputs (map func-input-value ss)
-;;         k-map 
-;;     ;; 
-
 (def __
   (fn [s]
+    (let [groups (group-by num-ones (minterm-vecs s))
+
+          adj-group-keys (adjacent-pairs (sort (keys groups)))
+          prime-implicants (find-prime-implicants groups adj-group-keys)
+          grouped-prime-implicants (group-by num-ones (find-prime-implicants groups adj-group-keys))
+
+          adj-group-keys (adjacent-pairs (sort (keys grouped-prime-implicants)))
+          column3 (find-prime-implicants groups adj-group-keys)
+          grouped-column3 (group-by num-ones column3)]
+      (println "grouped-column3" grouped-column3) ; DEBUG
+      ;; grouped-column3
+      (println "column4" (find-prime-implicants (group-by num-ones grouped-column3 (adjacent-pairs grouped-column3))))
+      )
     )
   )
+
+;; from http://webdocs.cs.ualberta.ca/~amaral/courses/329/webslides/Topic5-QuineMcCluskey/sld007.htm
+(def v #{
+         #{'a 'b 'c 'd}
+         #{'a 'b 'c 'D}
+         #{'a 'b 'C 'd}
+         #{'a 'B 'c 'D}
+         #{'a 'B 'C 'd}
+         #{'a 'B 'C 'D}
+         #{'A 'b 'c 'd}
+         #{'A 'b 'c 'D}
+         #{'A 'b 'C 'd}
+         #{'A 'B 'C 'd}})
 
 (and
  (= (__ #{#{'a 'B 'C 'd}
