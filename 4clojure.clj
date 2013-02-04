@@ -3443,15 +3443,31 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
           (recur (next nums) (conj pairs (list n1 n2)))
           (recur (next nums) pairs))))))
 
+(defn diff-by-one-bit?
+  [bits1 bits2]
+  (letfn [(bit-diff? [b1 b2]
+            (cond (and (nil? b1) (nil? b2)) false
+                  (or (nil? b1) (nil? b2)) false
+                  (pos? (bit-xor b1 b2)) true
+                  :else false))]
+    (= 1 (count (filter identity (map bit-diff? bits1 bits2))))))
+
+(defn combine-bits
+  [bits1 bits2]
+  (letfn [(combine-bit [b1 b2]
+            (cond (and (nil? b1) (nil? b2)) nil
+                  (pos? (bit-xor b1 b2)) nil
+                  :else b1))]
+    (map combine-bit bits1 bits2)))
+
 (defn find-prime-implicants
-  [groups adj-group-keys]
+  [groups]
   (mapcat (fn [[k1 k2]]
             (for [term1 (get groups k1)
                   term2 (get groups k2)
-                  :let [diff (map #(if (= %1 %2) %1 nil) term1 term2)]
-                  :when (= 1 (count (filter nil? diff)))]
-              diff))
-          adj-group-keys))
+                  :when (diff-by-one-bit? term1 term2)]
+              (combine-bits term1 term2)))
+          (-> groups keys sort adjacent-pairs)))
 
 ;; (defn gray-codes [n]
 ;;   (loop [n n
@@ -3463,18 +3479,25 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 
 (def __
   (fn [s]
-    (let [groups (group-by num-ones (minterm-vecs s))
+    (let [grouped-column1 (group-by num-ones (minterm-vecs s))
+          _ (println "grouped-column1" grouped-column1) ; DEBUG
 
-          adj-group-keys (adjacent-pairs (sort (keys groups)))
-          prime-implicants (find-prime-implicants groups adj-group-keys)
-          grouped-prime-implicants (group-by num-ones (find-prime-implicants groups adj-group-keys))
+          column2 (find-prime-implicants grouped-column1)
+          _ (println "column2" column2) ; DEBUG
+          grouped-column2 (group-by num-ones column2)
+          _ (println "grouped-column2" grouped-column2) ; DEBUG
 
-          adj-group-keys (adjacent-pairs (sort (keys grouped-prime-implicants)))
-          column3 (find-prime-implicants groups adj-group-keys)
-          grouped-column3 (group-by num-ones column3)]
-      (println "grouped-column3" grouped-column3) ; DEBUG
-      ;; grouped-column3
-      (println "column4" (find-prime-implicants (group-by num-ones grouped-column3 (adjacent-pairs grouped-column3))))
+          column3 (find-prime-implicants grouped-column2)
+          _ (println "column3" column3) ; DEBUG
+          grouped-column3 (group-by num-ones column3)
+
+          ;; adj-group-keys (adjacent-pairs (sort (keys grouped-column3)))
+          ;; column4 (find-prime-implicants grouped-column3 adjacent-pairs)
+          ;; grouped-column4 (group-by num-ones column4)]
+          ]
+      ;; (println "grouped-column4" grouped-column4) ; DEBUG
+      ;; grouped-column4
+     grouped-column2
       )
     )
   )
