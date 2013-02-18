@@ -2,3 +2,6 @@ Experimentation with Clojure.
 
 bin/clj is a REPL startup script (though I use
 https://github.com/technomancy/leiningen/ these days).
+
+The midi subdir contains an app that uses midi-clj
+(http://github.com/overtone/midi-clj).
