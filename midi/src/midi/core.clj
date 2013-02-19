@@ -80,4 +80,5 @@
 
 (defn -main
   [& args]
-  (one-minute-hookup))
+  (one-minute-hookup)
+  (close-all))
