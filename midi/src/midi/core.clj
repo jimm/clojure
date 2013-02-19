@@ -2,7 +2,12 @@
   (:use [overtone.midi])
   (:gen-class))
 
-(def setup
+;;; ================ MIDI setup ================
+
+(defn load-setup
+  "This is a function, because when it's compiled the gear might not be
+  attached."
+  []
   {:inputs {:iac-in (midi-in "Bus 1")
             :mb (midi-in "midiboard")
             :ws (midi-in "Wavestation")}
@@ -17,26 +22,38 @@
              :d4 (midi-out "D4")
              :unused8 (midi-out "Unitor8/AMT8 Port 8")}})
 
-(defn in  [key] (get-in setup [:inputs key]))
-(defn out [key] (get-in setup [:outputs key]))
+(def setup (memoize load-setup))
 
-;;; Use midi-route to connect input to output.
-;;;
-;;; See also midi-handle-events, which lets you specify an input and a
-;;; function.
+(defn in  [key] (get-in (setup) [:inputs key]))
+(defn out [key] (get-in (setup) [:outputs key]))
+
+;;; ================ helpers ================
+
+(defn run-for-seconds
+  "Run f while sleeping n seconds. If cleanup function is specified it is run
+  when the thread is exited, normally or abnormally."
+  ([n f]
+     (run-for-seconds n f nil))
+  ([n f cleanup]
+     (f)
+     (try
+       (Thread/sleep (* n 1000))
+       (finally
+         (when cleanup (cleanup))))))
+
+(defn cleanup-connection
+  [in out]
+  (doseq [note (range 128)] (midi-note-off out note))
+  (midi-route in nil))
+
+;;; ================ routing ================
 
 (defn one-minute-hookup
-  "Hooks up the midiboard to the kz for one minute then shuts everything
-  down."
+  "Hooks up the midiboard to the kz using midi-route for one minute then
+  turns off all notes and disconnects the route."
   []
-  (let [mb (in :mb)
-        kz (out :kz)]
-    (midi-route mb kz)                  ; send mb to kz
-    (Thread/sleep (* 60 1000))          ; you've got 60 seconds
-
-    (doseq [note (range 128)]           ; Send all-notes-off to :kz
-      (midi-note-off kz note))
-    (midi-route mb nil)))
+  (let [mb (in :mb), kz (out :kz)]
+    (run-for-seconds 60 #(midi-route mb kz) #(cleanup-connection mb kz))))
 
 (defn pass-through-filter
   "Pass event through to the Kurzweil 100PX."
@@ -44,30 +61,23 @@
   (midi-send-msg (:receiver (out :px)) (:msg event) -1))
 
 (defn one-minute-filter
-  "Hooks up the midiboard to the kz for one minute using midi-handle-events
-  then shuts everything down."
+  "Hooks up the midiboard to the kz using midi-handle-events for one minute
+  then turns off all notes and disconnects the route."
   []
-  (let [mb (in :mb)
-        kz (out :kz)]
-    (midi-handle-events mb pass-through-filter)
-    (Thread/sleep (* 60 1000))          ; you've got 60 seconds
+  (let [mb (in :mb), kz (out :kz)]
+    (run-for-seconds 60 #(midi-handle-events mb pass-through-filter) #(cleanup-connection mb kz))))
 
-    (doseq [note (range 128)]           ; Send all-notes-off to :kz
-      (midi-note-off kz note))
-    (midi-route mb nil)))
+;;; ================ cleanup ================
 
 (defn close-all
+  "Send .close to all inputs and outputs."
   []
   (doseq [io (list :inputs :outputs)
           inst (vals (io setup))]
     (.close (:device inst))))
 
+;;; ================ main ================
+
 (defn -main
   [& args]
   (one-minute-hookup))
-
-(defn testing-thread-interrupt
-  []
-  (try
-    (Thread/sleep (* 60 1000))
-    (catch InterruptedException ex (println ex))))
