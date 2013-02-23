@@ -1,10 +1,5 @@
-;;; In Emacs, use swank-clojure-project.
-;;;
-;;; The olds way: tart this up with C-u C-c C-z. That will ask you for the
-;;; program to run. Enter "compojure --nowrap", which runs a script I wrote
-;;; that launches Compojure. Then you can either load this file or define
-;;; everything separately. The server will run in the background. When you
-;;; re-define functions the changes take effect immediately.
+;;; To run this from within Emacs, I use my lein-repl method to start a
+;;; REPL. See https://github.com/jimm/elisp/blob/master/emacs.el.
 
 (ns hello-world
   (:use compojure.core
