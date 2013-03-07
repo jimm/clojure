@@ -1,5 +1,6 @@
 (ns midi.core
-  (:use [overtone.midi])
+  (:use [overtone.midi]
+        [overtone.at-at])
   (:gen-class))
 
 ;;; ================ MIDI setup ================
@@ -12,15 +13,16 @@
             :mb (midi-in "midiboard")
             :ws (midi-in "Wavestation")}
    :outputs {:iac-out (midi-out "IAC Driver Bus 1")
-             :unused1 (midi-out "Unitor8/AMT8 Port 1")
              :ws (midi-out "Wavestation")
              :kz (midi-out "K2")
              :px (midi-out "PX")
              :sj (midi-out "SJ")
              :tx2 (midi-out "TX3, TX2")
              :tx3 (midi-out "TX3, TX2")
-             :d4 (midi-out "D4")
-             :unused8 (midi-out "Unitor8/AMT8 Port 8")}})
+             :d4 (midi-out "D4")}})
+
+;;; The unused input and output ports have names of the form
+;;; "Unitor8/AMT8 Port N" where N is 1-8.
 
 (def setup (memoize load-setup))
 
@@ -29,17 +31,7 @@
 
 ;;; ================ helpers ================
 
-(defn run-for-seconds
-  "Run f while sleeping n seconds. If cleanup function is specified it is run
-  when the thread is exited, normally or abnormally."
-  ([n f]
-     (run-for-seconds n f nil))
-  ([n f cleanup]
-     (f)
-     (try
-       (Thread/sleep (* n 1000))
-       (finally
-         (when cleanup (cleanup))))))
+(def my-pool (mk-pool))                 ; Used by overtone.at-at functions
 
 (defn cleanup-connection
   [in out]
@@ -48,12 +40,17 @@
 
 ;;; ================ routing ================
 
+;; ==== use midi-route ====
+
 (defn one-minute-hookup
   "Hooks up the midiboard to the kz using midi-route for one minute then
   turns off all notes and disconnects the route."
   []
   (let [mb (in :mb), kz (out :kz)]
-    (run-for-seconds 60 #(midi-route mb kz) #(cleanup-connection mb kz))))
+    (midi-route mb kz)
+    (after (* 60 1000) #(cleanup-connection mb kz) my-pool)))
+
+;; ==== use midi-handle-events ====
 
 (defn pass-through-filter
   "Pass event through to the Kurzweil 100PX."
@@ -65,7 +62,8 @@
   then turns off all notes and disconnects the route."
   []
   (let [mb (in :mb), kz (out :kz)]
-    (run-for-seconds 60 #(midi-handle-events mb pass-through-filter) #(cleanup-connection mb kz))))
+    (midi-handle-events mb pass-through-filter)
+    (after (* 60 1000) #(cleanup-connection mb kz))))
 
 ;;; ================ cleanup ================
 
