@@ -3601,7 +3601,8 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 
 (def __
   (fn [s]
-    (let [grouped-column1 (group-by num-ones (minterm-vecs s))
+    (let [column1 (minterm-vecs s)
+          grouped-column1 (group-by num-ones column1)
           column2 (find-prime-implicants grouped-column1)
           grouped-column2 (group-by num-ones column2)
           column3 (find-prime-implicants grouped-column2)
