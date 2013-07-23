@@ -3434,7 +3434,6 @@
           suits (map suit cards)
           ranks (map rank cards)
           rank-freqs (vals (frequencies ranks))]
-      ;; (print "suits" suits "ranks" ranks "rank-freqs" rank-freqs) ; DEBUG
       (cond (and (= 1 (count (set suits)))
                  (= 4 (- (apply max ranks) (apply min ranks))))
             :straight-flush
@@ -3560,7 +3559,7 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
   [bits1 bits2]
   (letfn [(bit-diff? [b1 b2]
             (cond (and (nil? b1) (nil? b2)) false
-                  (or (nil? b1) (nil? b2)) false
+                  (or (nil? b1) (nil? b2)) true
                   (pos? (bit-xor b1 b2)) true
                   :else false))]
     (= 1 (count (filter identity (map bit-diff? bits1 bits2))))))
@@ -3568,19 +3567,29 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 (defn combine-bits
   [bits1 bits2]
   (letfn [(combine-bit [b1 b2]
-            (cond (and (nil? b1) (nil? b2)) nil
+            (cond (or (nil? b1) (nil? b2)) nil
                   (pos? (bit-xor b1 b2)) nil
                   :else b1))]
     (map combine-bit bits1 bits2)))
 
 (defn find-prime-implicants
   [groups]
-  (mapcat (fn [[k1 k2]]
-            (for [term1 (get groups k1)
-                  term2 (get groups k2)
-                  :when (diff-by-one-bit? term1 term2)]
-              (combine-bits term1 term2)))
-          (-> groups keys sort adjacent-pairs)))
+  (set
+   (mapcat (fn [[k1 k2]]
+             (for [term1 (get groups k1)
+                   term2 (get groups k2)
+                   :when (diff-by-one-bit? term1 term2)]
+               (combine-bits term1 term2)))
+           (-> groups keys sort adjacent-pairs))))
+
+(defn match-any?
+  [bits coll]
+  (some #{true} (set (map #(diff-by-one-bit? bits %1) coll))))
+
+(defn unique-terms
+  [col2 col3]
+  (concat (filter #(not (match-any? %1 col3)) col2)
+          col3))
 
 ;; (defn gray-codes [n]
 ;;   (loop [n n
@@ -3593,24 +3602,18 @@ symbols are in the alphabet #{'a, 'A, 'b, 'B, ...}."
 (def __
   (fn [s]
     (let [grouped-column1 (group-by num-ones (minterm-vecs s))
-          _ (println "grouped-column1" grouped-column1) ; DEBUG
-
           column2 (find-prime-implicants grouped-column1)
-          _ (println "column2" column2) ; DEBUG
           grouped-column2 (group-by num-ones column2)
-          _ (println "grouped-column2" grouped-column2) ; DEBUG
-
           column3 (find-prime-implicants grouped-column2)
-          _ (println "column3" column3) ; DEBUG
           grouped-column3 (group-by num-ones column3)
+          func-terms (unique-terms column2 column3)
+          ;; Correct up to here
+          ;; http://webdocs.cs.ualberta.ca/~amaral/courses/329/webslides/Topic5-QuineMcCluskey/sld068.htm
 
-          ;; adj-group-keys (adjacent-pairs (sort (keys grouped-column3)))
-          ;; column4 (find-prime-implicants grouped-column3 adjacent-pairs)
+
           ;; grouped-column4 (group-by num-ones column4)]
           ]
-      ;; (println "grouped-column4" grouped-column4) ; DEBUG
-      ;; grouped-column4
-     grouped-column2
+      func-terms
       )
     )
   )
