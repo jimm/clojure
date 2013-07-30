@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # usage: clj [-n] [-c dir] [-j jvm-opts] [-d] [-h] [script [args...]]
 #
@@ -13,22 +13,22 @@
 # -d prints out the final directory and classpath and exits without starting
 # Clojure.
 
-HERE=$(dirname $0)
-
 usage() {
     cat <<EOF
 usage: clj [-n] [-j jvm-opts] [-h] [script [args...]]
   -c dir        cd to the specified directory first
   -n            Do not use rlwrap
   -j jvm-opts   Passed through to the JVM
+  -x java-exe   Path to Java executable
   -d            Debug: print out final dir and classpath and exit
   -h            This help
 EOF
     exit $1
 } >&2
 
+java=java
 rlwrap=$(which rlwrap)
-while getopts "cdnj:h" opt ; do
+while getopts "cdnj:x:h" opt ; do
     case $opt in
         c)
             cd_dir="$OPTARG"
@@ -42,6 +42,9 @@ while getopts "cdnj:h" opt ; do
         j)
             jvm_args="$OPTARG"
             ;;
+        x)
+            java="$OPTARG"
+            ;;
         h)
             usage 0
             ;;
@@ -54,7 +57,7 @@ shift $(($OPTIND-1))
 
 # If dir specified, use that. Else look for lib, classes, or project.clj.
 if [ -z "$cd_dir" ] ; then
-    cd_dir=$(dirname $($HERE/findup lib || $HERE/findup classes || $HERE/findup project.clj || echo '.'))
+    cd_dir=$(dirname $(findup lib || findup classes || findup project.clj || echo '.'))
 fi
 cd "$cd_dir"
 
@@ -75,7 +78,7 @@ if [ -n "$debug" ] ; then
     pwd
     echo $CP
 elif [ -z "$1" ] ; then
-    $rlwrap java -server -cp "$CP" $jvm_args clojure.main
+    $rlwrap $java -server -cp "$CP" $jvm_args clojure.main
 else
-    java -server -cp "$CP" $jvm_args clojure.main $*
+    $java -server -cp "$CP" $jvm_args clojure.main $*
 fi

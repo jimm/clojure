@@ -1,5 +1,8 @@
 Experimentation with Clojure.
 
+4clojure.clj contains my solutions to the http://www.4clojure.com/
+programming challenges.
+
 bin/clj is a REPL startup script (though I use
 https://github.com/technomancy/leiningen/ these days).
 
