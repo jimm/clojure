@@ -75,8 +75,8 @@ done
 
 CP="$CLASSPATH":"$CLOJURE_LIB_PATH"
 if [ -n "$debug" ] ; then
-    pwd
-    echo $CP
+    echo current dir: $(pwd)
+    echo classpath: $CP
 elif [ -z "$1" ] ; then
     $rlwrap $java -server -cp "$CP" $jvm_args clojure.main
 else
