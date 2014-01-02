@@ -2965,7 +2965,6 @@
 ;; you don't get stuck in an infinite loop that's not producing results
 ;; every so often!
 
-;;; Blows stack on 4clojure.com at dfa4, though OK on my machine.
 (def __
   (fn [{:keys [states alphabet start accepts transitions]}]
     (letfn [(gen-words
@@ -3298,7 +3297,6 @@
         (frequencies (map (comp count first) (set latin-squares))))))
 )
 
-;; Only this one is too slow now
 (time
  (= (__ [[8 6 7 3 2 5 1 4] [6 8 3 7] [7 3 8 6] [3 7 6 8 1 4 5 2] [1 8 5 2 4] [8 1 2 4 5]])
     {4 1, 3 1, 2 7}))
