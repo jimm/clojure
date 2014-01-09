@@ -35,49 +35,49 @@
 ; ================ game commands ================
 
 (defn look []
-  (str (describe-location @*wizard-location* *wizard-nodes*) " "
-       (describe-paths @*wizard-location* *wizard-edges*) " "
-       (describe-objects @*wizard-location* @*wizard-object-locations*)))
+  (str (describe-location @*wizard-location *wizard-nodes) " "
+       (describe-paths @*wizard-location *wizard-edges) " "
+       (describe-objects @*wizard-location @*wizard-object-locations)))
 
 (defn walk [direction]
-  (let [exits (*wizard-location* *wizard-edges*)
+  (let [exits (*wizard-location *wizard-edges)
         next-loc (first (filter #(= (nth %1 1) direction) exits))]
     (if next-loc
       (dosync
-       (ref-set *wizard-location* (nth next-loc 0))
+       (ref-set *wizard-location (nth next-loc 0))
        (look))
       "You cannot go that way.")))
 
 (defn pickup [object-name]
   (let [object (keyword object-name)
-        here? (object-at object @*wizard-location* @*wizard-object-locations*)
-        i-haz? (object-at object :body @*wizard-object-locations*)]
+        here? (object-at object @*wizard-location @*wizard-object-locations)
+        i-haz? (object-at object :body @*wizard-object-locations)]
     (cond here? (dosync
-                 (alter *wizard-object-locations* assoc object :body)
+                 (alter *wizard-object-locations assoc object :body)
                  (str "You are now carrying the " (name object) "."))
           i-haz? (str "You already have the " (name object) ".")
           :else "You cannot get that.")))
 
 (defn letgo [object-name]
   (let [object (keyword object-name)
-        i-haz? (object-at object :body @*wizard-object-locations*)]
+        i-haz? (object-at object :body @*wizard-object-locations)]
     (cond i-haz? (dosync
-                 (alter *wizard-object-locations* assoc object @*wizard-location*)
+                 (alter *wizard-object-locations assoc object @*wizard-location)
                  (str "You dropped the " (name object) "."))
           :else (str "You are not carrying the " (name object) "."))))
 
 (defn inventory []
-  (let [names (map name (objects-at :body @*wizard-object-locations*))]
+  (let [names (map name (objects-at :body @*wizard-object-locations))]
     (cond (empty? names) "You are not carrying anything."
           :else (str "You have:\n  " (str/join "\n  " names)))))
 
 (defn reset []
   (dosync
-   (ref-set *wizard-object-locations* {:whiskey :living-room
+   (ref-set *wizard-object-locations {:whiskey :living-room
                                        :bucket :living-room
                                        :chain :garden
                                        :frog :garden})
-   (ref-set *wizard-location* :living-room)))
+   (ref-set *wizard-location :living-room)))
 
 ; ================ repl ================
 
@@ -86,7 +86,7 @@
     (conj (rest words) (symbol (first words)))))
 
 (defn game-eval [sexp]
-  (if (some (hash-set (keyword (first sexp))) *wizard-allowed-commands*) (eval sexp)
+  (if (some (hash-set (keyword (first sexp))) *wizard-allowed-commands) (eval sexp)
       "I do not know that command."))
 
 (defn game-print [lst]
@@ -112,12 +112,12 @@
 (walk "west")
 (look)
 
-(describe-objects :living-room @*wizard-object-locations*)
-(objects-at :living-room @*wizard-object-locations*)
+(describe-objects :living-room @*wizard-object-locations)
+(objects-at :living-room @*wizard-object-locations)
 
-(describe-paths :living-room *wizard-edges*)
+(describe-paths :living-room *wizard-edges)
 (describe-path [:garden "west" "door"])
 
-(describe-location :garden *wizard-nodes*)
+(describe-location :garden *wizard-nodes)
 
 ) ; end comment

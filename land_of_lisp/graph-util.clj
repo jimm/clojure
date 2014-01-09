@@ -3,7 +3,7 @@
 
 ; ================ data ================
 
-(def *dot-max-label-length* 30)
+(def ^:dynamic *dot-max-label-length* 30)
 
 ; ================ dot functions ================
 
@@ -102,12 +102,12 @@
 
 (load-file "wizard-data.clj")
   
-(ugraph->graphviz "/tmp/dot.gv" *wizard-nodes* *wizard-edges*)
-(graph->graphviz "/tmp/dot.gv" *wizard-nodes* *wizard-edges*)
+(ugraph->graphviz "/tmp/dot.gv" *wizard-nodes *wizard-edges)
+(graph->graphviz "/tmp/dot.gv" *wizard-nodes *wizard-edges)
 
-(graph->dot *wizard-nodes* *wizard-edges*)
-(edges->dot *wizard-edges*)
-(nodes->dot *wizard-nodes*)
+(graph->dot *wizard-nodes *wizard-edges)
+(edges->dot *wizard-edges)
+(nodes->dot *wizard-nodes)
 
 (dot-name 24)
 
