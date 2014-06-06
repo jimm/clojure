@@ -5,7 +5,7 @@
 
 (MidiSystem/getReceiver)
 
-(def song (MidiSystem/getSequence (File. "overtone-tutorial/midi/data/at_sea.midi")))
+(def song (MidiSystem/getSequence (java.io.File. "/Users/jimm/src/github/midilib/examples/NoFences.mid")))
 (map #(.size %) (.getTracks song))
 
 ;;; ================ System ================
@@ -33,7 +33,7 @@
                                       (let [d (new-device count device info :output)]
                                         (assoc devices :output (conj (:output devices) d)))
                                       (:output devices)))]
-          (recur (inc count) new-devices (next infos))))))
+          (recur (inc count) new-devices (next infos)))))))
 
 ;;; ================ Input ================
 
@@ -59,7 +59,7 @@
 (defmethod puts String
   [data])
 
-(defmethod puts ::collection)
+(defmethod puts ::collection
   [data])
 
 (defn enable-output
