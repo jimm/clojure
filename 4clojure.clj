@@ -1433,6 +1433,12 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/112
+;;;
+;;; Create a function which takes an integer and a nested collection of
+;;; integers as arguments. Analyze the elements of the input collection and
+;;; return a sequence which maintains the nested structure, and which
+;;; includes all elements starting from the head whose sum is less than or
+;;; equal to the input integer.
 
 (def __
   (fn [n itree]
@@ -1454,11 +1460,6 @@
   )
 
 (and
- ;; Create a function which takes an integer and a nested collection of
- ;; integers as arguments. Analyze the elements of the input collection and
- ;; return a sequence which maintains the nested structure, and which
- ;; includes all elements starting from the head whose sum is less than or
- ;; equal to the input integer.
  (=  (__ 10 [1 2 [3 [4 5] 6] 7])
      '(1 2 (3 (4))))
  (=  (__ 30 [1 2 [3 [4 [5 [6 [7 8]] 9]] 10] 11])
@@ -1477,6 +1478,13 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/125
+;;;
+;;; Create a function of no arguments which returns a string that is an
+;;; exact copy of the function itself.
+;;;
+;;; Hint: read up on Quines if you get stuck (this question is harder than
+;;; it first appears); but it's worth the effort to solve it independently
+;;; if you can!
 
 ;; This solution is not mine.
 (fn [] (let [a ["(fn [] (let [a " "] (apply str (a 0) a (a 1))))"]] (apply str (a 0) a (a 1))))
@@ -1485,18 +1493,29 @@
 ;; the text of the function's definition for each "__" instead of just
 ;; assigning the function to a var named "__".
 (and
- ;; Create a function of no arguments which returns a string that is an
- ;; exact copy of the function itself.
- ;;
- ;; Hint: read up on Quines if you get stuck (this question is harder than
- ;; it first appears); but it's worth the effort to solve it independently
- ;; if you can!
- ;;
  (= (str '__) (__))
 )
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/141
+;;;
+;;; In trick-taking card games such as bridge, spades, or hearts, cards are
+;;; played in groups known as "tricks" - each player plays a single card, in
+;;; order; the first player is said to "lead" to the trick. After all
+;;; players have played, one card is said to have "won" the trick. How the
+;;; winner is determined will vary by game, but generally the winner is the
+;;; highest card played in the suit that was led. Sometimes (again varying
+;;; by game), a particular suit will be designated "trump", meaning that its
+;;; cards are more powerful than any others: if there is a trump suit, and
+;;; any trumps are played, then the highest trump wins regardless of what
+;;; was led.
+;;;
+;;; Your goal is to devise a function that can determine which of a number
+;;; of cards has won a trick. You should accept a trump suit, and return a
+;;; function winner. Winner will be called on a sequence of cards, and
+;;; should return the one which wins the trick. Cards will be represented in
+;;; the format returned by Problem 128, Recognize Playing Cards: a hash-map
+;;; of :suit and a numeric :rank. Cards with a larger rank are stronger.
 
 (def __
   (fn [trump-suit]
@@ -1506,23 +1525,6 @@
   )
 
 (and
- ;; In trick-taking card games such as bridge, spades, or hearts, cards are
- ;; played in groups known as "tricks" - each player plays a single card, in
- ;; order; the first player is said to "lead" to the trick. After all
- ;; players have played, one card is said to have "won" the trick. How the
- ;; winner is determined will vary by game, but generally the winner is the
- ;; highest card played in the suit that was led. Sometimes (again varying
- ;; by game), a particular suit will be designated "trump", meaning that its
- ;; cards are more powerful than any others: if there is a trump suit, and
- ;; any trumps are played, then the highest trump wins regardless of what
- ;; was led.
- ;;
- ;; Your goal is to devise a function that can determine which of a number
- ;; of cards has won a trick. You should accept a trump suit, and return a
- ;; function winner. Winner will be called on a sequence of cards, and
- ;; should return the one which wins the trick. Cards will be represented in
- ;; the format returned by Problem 128, Recognize Playing Cards: a hash-map
- ;; of :suit and a numeric :rank. Cards with a larger rank are stronger.
  (let [notrump (__ nil)]
    (and (= {:suit :club :rank 9}  (notrump [{:suit :club :rank 4}
                                             {:suit :club :rank 9}]))
@@ -1537,6 +1539,15 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/150
+;;;
+;;; A palindromic number is a number that is the same when written forwards
+;;; or backwards (e.g., 3, 99, 14341).
+;;;
+;;; Write a function which takes an integer n, as its only argument, and
+;;; returns an increasing lazy sequence of all palindromic numbers that are
+;;; not less than n.
+;;; 
+;;; The most simple solution will exceed the time limit!
 
 (def __
   (fn [n]
@@ -1549,17 +1560,20 @@
                               (subs s (if (odd? len) (inc half) half))]))
             (incstr [s] (if (empty? s)
                           "1"
-                          (str (inc (read-string s)))))
+                          (str (inc (Long/parseLong s)))))
 
             (palindrome-after [pal]
               (let [[beg mid end] (split-num pal)
-                    all-nines? (fn [str] (empty? (filter #(not= \9 %) str)))]
+                    all-nines? (
+                                fn [str] (empty? (filter #(not= \9 %) str)))]
                 (cond (all-nines? beg) (first (filter palindrome? (iterate inc (inc pal))))
-                      (empty? mid) (let [s (incstr beg)] (read-string (str s (apply str (reverse s)))))
+                      (empty? mid) (let [s (incstr beg)]
+                                     (Long/parseLong (str s (apply str (reverse s)))))
                       (= "9" mid)  (if (empty? beg)
                                      11
-                                     (let [s (incstr beg)] (read-string (str s "0" (apply str (reverse s))))))
-                      :else        (read-string (str beg (incstr mid) end)))))
+                                     (let [s (incstr beg)]
+                                       (Long/parseLong (str s "0" (apply str (reverse s))))))
+                      :else        (Long/parseLong (str beg (incstr mid) end)))))
             (lazy-palindrome-generator [pal]
               (let [next-pal (palindrome-after pal)]
                 (lazy-seq
@@ -1570,14 +1584,6 @@
   )
 
 (and
- ;; A palindromic number is a number that is the same when written forwards
- ;; or backwards (e.g., 3, 99, 14341).
- ;;
- ;; Write a function which takes an integer n, as its only argument, and
- ;; returns an increasing lazy sequence of all palindromic numbers that are
- ;; not less than n.
- ;; 
- ;; The most simple solution will exceed the time limit!
  (= (take 26 (__ 0))
     [0 1 2 3 4 5 6 7 8 9
      11 22 33 44 55 66 77 88 99
@@ -1661,6 +1667,18 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/101
+;;;
+;;; Given two sequences x and y, calculate the <a
+;;; href="https://secure.wikimedia.org/wikipedia/en/wiki/Levenshtein_distance">Levenshtein
+;;; distance</a> of x and y, i. e. the minimum number of edits needed to
+;;; transform x into y. The allowed edits are:
+;;;
+;;; - insert a single item
+;;; - delete a single item
+;;; - replace a single item with another item
+;;;
+;;; WARNING: Some of the test cases may timeout if you write an inefficient
+;;; solution!
 
 (def __
   (fn [s t]
@@ -1680,17 +1698,6 @@
   )
 
 (and
- ;; Given two sequences x and y, calculate the <a
- ;; href="https://secure.wikimedia.org/wikipedia/en/wiki/Levenshtein_distance">Levenshtein
- ;; distance</a> of x and y, i. e. the minimum number of edits needed to
- ;; transform x into y. The allowed edits are:
- ;;
- ;; - insert a single item
- ;; - delete a single item
- ;; - replace a single item with another item
- ;;
- ;; WARNING: Some of the test cases may timeout if you write an inefficient
- ;; solution!
  (= (__ "kitten" "sitting") 3)
  (= (__ "closure" "clojure") (__ "clojure" "closure") 1)
  (= (__ "xyx" "xyyyx") 2)
@@ -1703,6 +1710,13 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/73
+;;;
+;;; A tic-tac-toe board is represented by a two dimensional vector. X is
+;;; represented by :x, O is represented by :o, and empty is represented by
+;;; :e. A player wins by placing three Xs or three Os in a horizontal,
+;;; vertical, or diagonal row. Write a function which analyzes a tic-tac-toe
+;;; board and returns :x if X has won, :o if O has won, and nil if neither
+;;; player has won.
 
 (def __
 (fn [board]
@@ -1723,12 +1737,6 @@
 )
 
 (and
- ;; A tic-tac-toe board is represented by a two dimensional vector. X is
- ;; represented by :x, O is represented by :o, and empty is represented by
- ;; :e. A player wins by placing three Xs or three Os in a horizontal,
- ;; vertical, or diagonal row. Write a function which analyzes a tic-tac-toe
- ;; board and returns :x if X has won, :o if O has won, and nil if neither
- ;; player has won.
  (= nil (__ [[:e :e :e] [:e :e :e] [:e :e :e]]))
  (= :x (__ [[:x :e :o]
             [:x :e :e]
@@ -1751,6 +1759,29 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/94
+;;;
+;;; The <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life">game of
+;;; life</a> is a cellular automaton devised by mathematician John Conway.
+;;;
+;;; The 'board' consists of both live (#) and dead ( ) cells. Each
+;;; cell interacts with its eight neighbours (horizontal, vertical,
+;;; diagonal), and its next state is dependent on the following
+;;; rules:
+;;;
+;;; 1) Any live cell with fewer than two live neighbours dies, as if caused
+;;; by under-population.
+;;;
+;;; 2) Any live cell with two or three live neighbours lives on to the next
+;;; generation.
+;;;
+;;; 3) Any live cell with more than three live neighbours dies, as if by
+;;; overcrowding.
+;;;
+;;; 4) Any dead cell with exactly three live neighbours becomes a live cell,
+;;; as if by reproduction.
+;;;
+;;; Write a function that accepts a board, and returns a board representing
+;;; the next generation of cells.
 
 (def __
   (fn [board]
@@ -1765,8 +1796,6 @@
                               :when (live? (cell r c))]
                           1))
                  (if (live? (cell row col)) 1 0)))]
-        ;; Could memoize cell but these boards are small and we're only
-        ;; calculating one generation.
         (map #(apply str %)
              (partition width
                         (for [row (range height)
@@ -1774,72 +1803,46 @@
                               :let [is-live (live? (cell row col))
                                     ln (live-neighbors row col)]]
                           (if is-live
-                            (cond (< ln 2) \space           ; underpopulation
-                                  (or (= 2 ln) (= 3 ln)) \# ; continue living
-                                  (> ln 3) \space)          ; overpopulation
-                            (if (= ln 3)
-                              \#        ; birth
-                              \space)))))
+                            (if (or (= 2 ln) (= 3 ln)) \# \space) ; rules 1-3
+                            (if (= ln 3) \# \space)))))           ; rule 4
     )))
   )
 
 (and
- ;; The <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life">game of
- ;; life</a> is a cellular automaton devised by mathematician John Conway.
- ;;
- ;; The 'board' consists of both live (#) and dead ( ) cells. Each
- ;; cell interacts with its eight neighbours (horizontal, vertical,
- ;; diagonal), and its next state is dependent on the following
- ;; rules:
- ;;
- ;; 1) Any live cell with fewer than two live neighbours dies, as if caused
- ;; by under-population.
- ;;
- ;; 2) Any live cell with two or three live neighbours lives on to the next
- ;; generation.
- ;;
- ;; 3) Any live cell with more than three live neighbours dies, as if by
- ;; overcrowding.
- ;;
- ;; 4) Any dead cell with exactly three live neighbours becomes a live cell,
- ;; as if by reproduction.
- ;;
- ;; Write a function that accepts a board, and returns a board representing
- ;; the next generation of cells.
  (= (__ ["      "
-        " ##   "
-        " ##   "
-        "   ## "
-        "   ## "
-        "      "])
-   ["      "  
-    " ##   "
-    " #    "
-    "    # "
-    "   ## "
-    "      "])
+         " ##   "
+         " ##   "
+         "   ## "
+         "   ## "
+         "      "])
+    ["      "  
+     " ##   "
+     " #    "
+     "    # "
+     "   ## "
+     "      "])
  (= (__ ["     "
-        "     "
-        " ### "
-        "     "
-        "     "])
-   ["     "
-    "  #  "
-    "  #  "
-    "  #  "
-    "     "])
+         "     "
+         " ### "
+         "     "
+         "     "])
+    ["     "
+     "  #  "
+     "  #  "
+     "  #  "
+     "     "])
  (= (__ ["      "
-        "      "
-        "  ### "
-        " ###  "
-        "      "
-        "      "])
-   ["      "
-    "   #  "
-    " #  # "
-    " #  # "
-    "  #   "
-    "      "]) )
+         "      "
+         "  ### "
+         " ###  "
+         "      "
+         "      "])
+    ["      "
+     "   #  "
+     " #  # "
+     " #  # "
+     "  #   "
+     "      "]) )
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/106
@@ -1853,9 +1856,10 @@
       (if (some #{end} ns)
         path-length
         (recur (inc path-length)
-               (concat (map #(* % 2) ns)
-                       (filter integer? (map #(/ % 2) ns))
-                       (map #(+ % 2) ns))))))
+               (set                     ; remove duplicates
+                (concat (map #(* % 2) ns)
+                        (map #(/ % 2) (filter even? ns))
+                        (map #(+ % 2) ns)))))))
   )
 
 (and
@@ -1881,29 +1885,30 @@
 
 ;;; ****************************************************************
 ;;; http://www.4clojure.com/problem/113
-
-;; see reify
+;;;
+;;; Write a function that takes a variable number of integer arguments. If
+;;; the output is coerced into a string, it should return a comma (and
+;;; space) separated list of the inputs sorted smallest to largest. If the
+;;; output is coerced into a sequence, it should return a seq of unique
+;;; input elements in the same order as they were entered.
+;;;
+;;; See (doc reify)
 
 (def __
-  (fn [& is]
+  (fn [& coll]
     (reify clojure.lang.Seqable
       (toString [this]
-        (apply str (interpose ", " (sort is))))
+        (apply str (interpose ", " (sort coll))))
       (seq [this]
-        (loop [is is
-               seen #{}
+        (loop [coll coll
                answer []]
-          (cond (empty? is) (seq answer)
-                (some #{(first is)} seen) (recur (next is) seen answer)
-                :else (recur (next is) (conj seen (first is)) (conj answer (first is))))))))
+          (let [elem (first coll)]
+            (cond (empty? coll) (seq answer)
+                  (some #{elem} answer) (recur (next coll) answer)
+                  :else (recur (next coll) (conj answer elem))))))))
   )
 
 (and
- ;; Write a function that takes a variable number of integer arguments. If
- ;; the output is coerced into a string, it should return a comma (and
- ;; space) separated list of the inputs sorted smallest to largest. If the
- ;; output is coerced into a sequence, it should return a seq of unique
- ;; input elements in the same order as they were entered.
  (= "1, 2, 3" (str (__ 2 1 3)))
  (= '(2 1 3) (seq (__ 2 1 3)))
  (= '(2 1 3) (seq (__ 2 1 3 3 1 2)))
