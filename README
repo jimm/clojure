@@ -8,3 +8,5 @@ https://github.com/technomancy/leiningen/ these days).
 
 The midi subdir contains an app that uses midi-clj
 (http://github.com/overtone/midi-clj).
+
+cloplayer is an Apache log file replayer.
