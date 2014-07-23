@@ -6,13 +6,22 @@ Clojure Apache log file replayer.
 
 Download from http://github.com/jimm/clojure/cloplayer
 
+## Building
+
+    lein uberjar
+
 ## Usage
 
-    $ lein run apache-log-file hostname
+    # Without uberjar
+    lein run apache-log-file hostname
 
-### Bugs
+    # With uberjar
+    java -jar cloplayer-0.1.0-standalone.jar logfile host
 
-None known.
+## Options
+
+* logfile - Apache log file
+* host - Host to which log file should be replayed
 
 ## License
 
