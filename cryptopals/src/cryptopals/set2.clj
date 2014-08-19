@@ -44,7 +44,7 @@
               prev-block iv
               decrypted-blocks []]
          (if (nil? encrypted-blocks)
-           (flatten decrypted-blocks)
+           (byte-array-to-bytes (flatten decrypted-blocks))
            ;; else
            (let [enc-block (first encrypted-blocks)
                  ;; We call set1/aes-in-ecb-mode directly instead of calling

@@ -6,7 +6,6 @@
 (deftest decrypt-cbc-test
   (testing "CBC decryption"
     (let [retval (decrypt-cbc-in-file "data/10.txt" (str-to-bytes "YELLOW SUBMARINE"))]
-      (print (bytes-to-str retval))     ;DEBUG
       (is (= (take 35 retval)
              (str-to-bytes "I'm back and I'm ringin' the bell \n"))))))
 

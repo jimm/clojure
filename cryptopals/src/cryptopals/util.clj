@@ -31,7 +31,7 @@
   (apply str (for [b bytes] (format "%02x" b))))
 
 (defn byte-array-to-bytes
-  "Convert a byte[] to a seq of bytes."
+  "Convert a byte[] or any seq of numbers into a seq of bytes."
   [ba]
   (map #(bit-and % 0xff) ba))
 
@@ -139,10 +139,12 @@
 ;;; ================ padding ================
 
 (defn pad
-  ([bytes] (pad bytes 16 0x04))
-  ([bytes len] (pad bytes len 0x04))
-  ([bytes len pad-byte]
-     (let [r (rem (count bytes) len)]
+  "Pad bytes to a multiple of length using the algorithm described in
+  http://tools.ietf.org/html/rfc2315."
+  ([bytes] (pad bytes 16))
+  ([bytes len]
+     (let [r (rem (count bytes) len)
+           pad-len (- len r)]
        (if (zero? r)
          bytes
-         (concat bytes (repeat (- len r) pad-byte))))))
+         (concat bytes (repeat pad-len pad-len))))))
