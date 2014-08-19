@@ -52,7 +52,7 @@
 
 (deftest encrypt-aes-in-ecb-mode-test
   (testing "make sure AES in ECB encryption works"
-    (let [plaintext (apply str (pad "Spongebob Squarepants lives in Bikini Bottom"))
+    (let [plaintext "Spongebob Squarepants lives in Bikini Bottom!!!!"
           bytes (str-to-bytes plaintext)
           key (str-to-bytes "lock-and-key!!?!")]
     (is (= (decrypt-aes-in-ecb-mode (encrypt-aes-in-ecb-mode bytes key) key)

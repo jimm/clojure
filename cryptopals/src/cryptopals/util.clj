@@ -30,6 +30,11 @@
   [bytes]
   (apply str (for [b bytes] (format "%02x" b))))
 
+(defn byte-array-to-bytes
+  "Convert a byte[] to a seq of bytes."
+  [ba]
+  (map #(bit-and % 0xff) ba))
+
 ;;; ================ base 64 ================
 
 (defn bytes-to-base64
