@@ -108,7 +108,7 @@
 (defn encrypt-aes-in-ecb-mode
   "Encrypt bytes using key-bytes and return encrypted bytes."
   [bytes key-bytes]
-  (aes-in-ecb-mode bytes key-bytes :encrypt))
+  (byte-array-to-bytes (aes-in-ecb-mode bytes key-bytes :encrypt)))
 
 (defn decrypt-aes-in-ecb-mode-in-file
   "Decrypt base64-encoded file using key-bytes and return plaintext string."
@@ -123,32 +123,33 @@
   (/ (count (set coll)) (count coll)))
 
 (defn block-sets
-  "For each item in coll, create all blocks of various lengths. Return a seq
-  of vectors containing the item, the block length, and the seq of blocks of
-  that length."
-  [coll]
+  "Create all blocks of various lengths. Return a seq of vectors containing
+  the bytes, block length, and the seq of blocks of that length."
+  [bytes]
   (let [max-block-len (min 24
-                           (inc (int (/ (count (first coll)) 3))))]
-    (for [item coll                         ; each item
-          block-len (range 3 max-block-len) ; block lens to try
+                           (inc (int (/ (count bytes) 3))))]
+    (for [block-len (range 3 max-block-len) ; block lens to try
           offset (range 0 block-len)]       ; check starting at offset
-      [item block-len (partition block-len (drop offset item))])))
+      [bytes block-len (partition block-len (drop offset bytes))])))
 
 (defn detect-aes-in-ecb-mode
   "Find the collection item that is most likely encrypted using AES in ECB
   mode and returns the plaintext string. Items should be seqs of bytes.
   Return a seq containing plaintext, block length, and blocks."
   [coll]
-  (let [b-sets (block-sets coll)
+  (let [b-sets (map block-sets coll)
         candidate (apply min-key
                          (fn [[_ _ blocks]] (repeatedness-factor blocks))
                          b-sets)]
     candidate))
 
+#_(detect-aes-in-ecb-mode-in-file "data/8.txt")
+
 (defn detect-aes-in-ecb-mode-in-file
-  "Return the line in a hex encoded file that is most likely to be encoded
-  using AES in ECB."
+  "Return a triplet containing the block length, repeatedness factor, and
+  bytes of the line in a hex encoded file that is most likely to be
+  encoded using AES in ECB."
   [path]
   (let [lines (-> path slurp str/split-lines)
-        [plaintext block-len blocks] (detect-aes-in-ecb-mode (pmap str-to-bytes lines))]
-    [block-len (repeatedness-factor blocks) (bytes-to-str plaintext)]))
+        [bytes block-len blocks] (detect-aes-in-ecb-mode (pmap str-to-bytes lines))]
+    [block-len (repeatedness-factor blocks) bytes]))

@@ -139,8 +139,8 @@
 ;;; ================ padding ================
 
 (defn pad
-  "Pad bytes to a multiple of length using the algorithm described in
-  http://tools.ietf.org/html/rfc2315."
+  "Pad bytes to a multiple of length (default 16) using the algorithm
+  described in http://tools.ietf.org/html/rfc2315."
   ([bytes] (pad bytes 16))
   ([bytes len]
      (let [r (rem (count bytes) len)

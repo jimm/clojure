@@ -42,8 +42,8 @@
 ;;     (let [retval (break-repeating-key-xor-in-file "data/6.txt")]
 ;;       (is (= (first retval)             ; key
 ;;              (str-to-bytes "Terminator X: Bring the noise")))
-      ;; (is (= (take 35 (second retval))
-      ;;        (str-to-bytes "I'm back and I'm ringin' the bell \n"))))))
+;;       (is (= (take 35 (second retval))
+;;              (str-to-bytes "I'm back and I'm ringin' the bell \n"))))))
 
 (deftest decrypt-aes-in-ecb-mode-test
   (testing "AES in ECB decryption"
