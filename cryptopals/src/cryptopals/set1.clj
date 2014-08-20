@@ -59,18 +59,23 @@
 
 ;;; ================ 6 ================
 
+(defn pairs
+  "Returns all combinations of pairs of items in coll."
+  [coll]
+  (loop [coll coll
+         combis ()]
+    (println "coll" coll "combis" combis) ;DEBUG
+    (cond
+     (or (nil? coll) (nil? (second coll))) (partition 2 combis)
+     :else (recur (next coll) (apply concat combis (map #(list (first coll) %) (next coll)))))))
+
 (defn keysize-fitness
   "Given bytes and a key size, return a key size fitness value. Lower
   numbers are better."
   [bytes keysize]
-  (let [test-blocks (take 4 (partition keysize bytes))
-        dists (+ (hamming-distance (nth test-blocks 0) (nth test-blocks 1))
-                 (hamming-distance (nth test-blocks 0) (nth test-blocks 2))
-                 (hamming-distance (nth test-blocks 0) (nth test-blocks 3))
-                 (hamming-distance (nth test-blocks 1) (nth test-blocks 2))
-                 (hamming-distance (nth test-blocks 1) (nth test-blocks 3))
-                 (hamming-distance (nth test-blocks 2) (nth test-blocks 3)))]
-    (/ dists (* keysize 6))))
+  (let [test-blocks (pairs (take 4 (partition keysize bytes)))
+        dists (apply + (map #(hamming-distance %1 %2) test-blocks))]
+    (/ dists keysize)))
 
 (defn break-repeating-key-xor
   "Return a list of (repeating key bytes, decoded data bytes) for the given
