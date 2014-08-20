@@ -124,6 +124,8 @@
 ;; mode using a consistent but unknown key (for instance, assign a single
 ;; random key, once, to a global variable).
 
+(def consistent-rand-key (random-bytes))
+
 ;; Now take that same function and have it append to the plaintext, BEFORE
 ;; ENCRYPTING, the following string:
 
@@ -134,9 +136,17 @@
 
 ;; ** Spoiler alert. Do not decode this string now. Don't do it.
 
+(def mystery-suffix
+  (base64-to-bytes
+   "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"))
+
 ;; Base64 decode the string before appending it. Do not base64 decode the
 ;; string by hand; make your code do it. The point is that you don't know its
 ;; contents.
+
+(defn encrypt-ecb-unknown-key
+  [bytes]
+  (set1/encrypt-aes-in-ecb-mode (pad (concat bytes mystery-suffix)) consistent-rand-key))
 
 ;; What you have now is a function that produces:
 
@@ -150,6 +160,20 @@
 ;; 1. Feed identical bytes of your-string to the function 1 at a time --- start
 ;; with 1 byte ("A"), then "AA", then "AAA" and so on. Discover the block size
 ;; of the cipher. You know it, but do this step anyway.
+
+(defn detect-block-size
+  "Given an encryption function, detect the block size of the cipher."
+  [f]
+  (loop [bytes '(120)
+         block-size 1]
+    (let [enc (f bytes)]
+      (cond
+       (= (take block-size enc) (take block-size (drop block-size enc))) block-size
+       (> block-size 2048) (throw (Exception. "oops, block too big"))
+       :else (recur (conj bytes 120) (inc block-size))))))
+      ;; (if (= (take block-size enc) (take block-size (drop block-size enc)))
+      ;;   block-size
+      ;;   (recur (conj bytes 120))))))
 
 ;; 2. Detect that the function is using ECB. You already know, but do this step
 ;; anyways.
@@ -166,6 +190,11 @@
 ;; your dictionary. You've now discovered the first byte of unknown-string.
 
 ;; 6. Repeat for the next byte.
+
+;; (defn decrypt-mystery-suffix
+;;   (let [block-size (detect-block-size encrypt-ecb-unknown-key)
+;;         input-block (repeat 120 (dec block-size)) ; "xxx...", one short of block size
+;;         algorithm (detect-block-cipher-mode (encrypt-ecb-unknown-key (repeat 
 
 ;; ** Congratulations.
 
