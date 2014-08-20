@@ -19,14 +19,7 @@
 
 (deftest cipher-mode-detector-test
   (testing "cipher mode detection"
-    (let [plaintext
-"Here's the plan. I write so much text
-that sooner or later something is bound
-to repeat. That should flush out the ECB
-mode encryption, shouldn't it?
-Here is some repeated text.
-Here is some repeated text.
-Here is some repeated text."
+    (let [plaintext (apply str (repeat 48 "x"))
           plaintext-bytes (str-to-bytes plaintext)]
       (dotimes [_ 10]
         (let [[alg enc-bytes] (encryption-oracle plaintext-bytes)]
