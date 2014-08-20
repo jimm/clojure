@@ -28,7 +28,6 @@ Here is some repeated text.
 Here is some repeated text.
 Here is some repeated text."
           plaintext-bytes (str-to-bytes plaintext)]
-      (dotimes [_ 1]
+      (dotimes [_ 10]
         (let [[alg enc-bytes] (encryption-oracle plaintext-bytes)]
-          (println "alg" alg)           ; DEBUG
           (is (= (detect-block-cipher-mode enc-bytes) alg)))))))
