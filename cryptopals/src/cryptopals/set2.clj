@@ -112,7 +112,6 @@
 (defn detect-block-cipher-mode
   [bytes]
   (let [b-sets (map (fn [[_ _ bs]] bs) (set1/block-sets bytes))
-        _ (println (map count b-sets))  ; DEBUG
         r-factors (map set1/repeatedness-factor b-sets)
         min-repeat-factor (apply min r-factors)]
     (if (< min-repeat-factor 1)
