@@ -219,28 +219,48 @@
         block (first-block encoded block-size)]
     (list block probe-byte)))
 
+(defn decrypt-mystery-message-block
+  [block-num block-size decrypted-bytes]
+        ;; TODO
+  (loop [decrypted-bytes decrypted-bytes]
+    (let [n (- block-size (count decrypted-bytes) 1)
+          input-block (if (zero? block-num)
+                        (repeat n 120) ; XXX...
+                        (take n (nth-block decrypted-bytes block-size block-num)))
+          byte-block-dict (apply hash-map
+                                 (mapcat #(make-ecb-decrypt-map-entry
+                                           block-size
+                                        ; XXXAnswerSoFar (length = block size - 1)
+                                           (concat input-block decrypted-bytes)
+                                           %)
+                                         (range 0 256)))
+; FIXME
+          mystery-byte (get byte-block-dict
+                            (nth-block (encrypt-ecb-unknown-key input-block) block-size block-num))]
+      (recur (conj decrypted-bytes mystery-byte)))))
+
 (defn decrypt-mystery-message
   "Decrypt the mystery message using an ECB known text block attack."
   []
-  (let [block-size (detect-block-size encrypt-ecb-unknown-key)
+  (let [ciphertext-size (count (encrypt-ecb-unknown-key '()))
+        block-size (detect-block-size encrypt-ecb-unknown-key)
         algorithm (detect-block-cipher-mode
                    (encrypt-ecb-unknown-key (repeat 48 120)))] ; "X" * 48
     (assert (= :ecb algorithm))
-    (loop [decrypted-bytes []]
-      (if (= (count decrypted-bytes) block-size)
+    (assert (zero? (rem ciphertext-size block-size)))
+
+    (loop [block-num 0
+           ciphertext-size ciphertext-size
+           decrypted-bytes []]
+      (if (zero? ciphertext-size)
         decrypted-bytes
-        (let [n (- block-size (count decrypted-bytes) 1)
-              input-block (repeat n 120) ; XXX...
-              byte-block-dict (apply hash-map
-                                     (mapcat #(make-ecb-decrypt-map-entry
-                                               block-size
-                                               ; XXXAnswerSoFar (length = block size - 1)
-                                               (concat input-block decrypted-bytes)
-                                               %)
-                                             (range 0 256)))
-              mystery-byte (get byte-block-dict
-                                (first-block (encrypt-ecb-unknown-key input-block) block-size))]
-          (recur (conj decrypted-bytes mystery-byte)))))))
+        (recur (inc block-num)
+               (- ciphertext-size block-size)
+               (concat decrypted-bytes
+                       (decrypt-mystery-message-block
+                        block-num
+                        block-size
+                        decrypted-bytes)))))))
 
 
 ;; ** Congratulations.
@@ -298,3 +318,87 @@
 ;; Using only the user input to profile_for() (as an oracle to
 ;; generate "valid" ciphertexts) and the ciphertexts themselves, make a
 ;; role=admin profile.
+
+;;; ================ 14 ================
+
+;;; Byte-at-a-time ECB decryption (Harder)
+
+;; Take your oracle function from #12. Now generate a random count of random
+;; bytes and prepend this string to every plaintext. You are now doing:
+
+;; AES-128-ECB(random-prefix || attacker-controlled || target-bytes, random-key)
+;; Same goal: decrypt the target-bytes.
+
+;; Stop and think for a second.
+
+;; What's harder than challenge #12 about doing this? How would you overcome
+;; that obstacle? The hint is: you're using all the tools you already have;
+;; no crazy math is required.
+
+;; Think "STIMULUS" and "RESPONSE".
+
+;;; ================ 15 ================
+
+;; PKCS#7 padding validation
+;; Write a function that takes a plaintext, determines if it has valid PKCS#7 padding, and strips the padding off.
+
+;; The string:
+
+;; "ICE ICE BABY\x04\x04\x04\x04"
+;; ... has valid padding, and produces the result "ICE ICE BABY".
+
+;; The string:
+
+;; "ICE ICE BABY\x05\x05\x05\x05"
+;; ... does not have valid padding, nor does:
+
+;; "ICE ICE BABY\x01\x02\x03\x04"
+
+;; If you are writing in a language with exceptions, like Python or Ruby,
+;; make your function throw an exception on bad padding.
+
+;; Crypto nerds know where we're going with this. Bear with us.
+
+;;; ================ 16 ================
+
+;;; CBC bitflipping attacks
+
+;; Generate a random AES key.
+
+;; Combine your padding code and CBC code to write two functions.
+
+;; The first function should take an arbitrary input string, prepend the
+;; string:
+
+;; "comment1=cooking%20MCs;userdata="
+;; .. and append the string:
+;; ";comment2=%20like%20a%20pound%20of%20bacon"
+
+;; The function should quote out the ";" and "=" characters.
+
+;; The function should then pad out the input to the 16-byte AES block
+;; length and encrypt it under the random AES key.
+
+;; The second function should decrypt the string and look for the
+;; characters ";admin=true;" (or, equivalently, decrypt, split the string
+;; on ";", convert each resulting string into 2-tuples, and look for
+;; the "admin" tuple).
+
+;; Return true or false based on whether the string exists.
+
+;; If you've written the first function properly, it should not be possible
+;; to provide user input to it that will generate the string the second
+;; function is looking for. We'll have to break the crypto to do that.
+
+;; Instead, modify the ciphertext (without knowledge of the AES key) to
+;; accomplish this.
+
+;; You're relying on the fact that in CBC mode, a 1-bit error in a
+;; ciphertext block:
+
+;; * Completely scrambles the block the error occurs in
+;; * Produces the identical 1-bit error(/edit) in the next ciphertext block.
+
+;; Stop and think for a second.
+;; Before you implement this attack, answer this question: why does CBC mode
+;; have this property?
