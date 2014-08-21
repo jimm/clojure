@@ -79,3 +79,17 @@
     (is (= (pad [1 2 3]) [1 2 3 13 13 13 13 13 13 13 13 13 13 13 13 13]))
     (is (= (pad [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17])
            [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15]))))
+
+(deftest nth-block-test
+  (testing "first block"
+    (is (= (first-block [1 2 3 4] 2) [1 2]))
+    (is (= (first-block [1 2] 2) [1 2]))
+    (is (= (first-block [1] 2) [1]))
+    (is (nil? (first-block [] 2))))
+
+  (testing "nth block"
+    (is (= (nth-block [1 2 3 4] 2 0) [1 2]))
+    (is (= (nth-block [1 2 3 4] 2 1) [3 4]))
+    (is (nil? (nth-block [1 2 3 4] 2 2)))
+    (is (nil? (nth-block [1 2 3 4] 2 99)))))
+    

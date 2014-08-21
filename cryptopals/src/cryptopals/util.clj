@@ -148,3 +148,15 @@
        (if (zero? r)
          bytes
          (concat bytes (repeat pad-len pad-len))))))
+
+(defn first-block
+  "Returns the first block-size bytes."
+  [bytes block-size]
+  (let [block (take block-size bytes)]
+    (if (empty? block) nil block)))
+
+(defn nth-block
+  "Returns the nth block-size chunk of bytes."
+  [bytes block-size n]
+  (let [block (take block-size (drop (* n block-size) bytes))]
+    (if (empty? block) nil block)))

@@ -136,7 +136,7 @@
 
 ;; ** Spoiler alert. Do not decode this string now. Don't do it.
 
-(def mystery-suffix
+(def mystery-message
   (base64-to-bytes
    "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"))
 
@@ -146,7 +146,7 @@
 
 (defn encrypt-ecb-unknown-key
   [bytes]
-  (set1/encrypt-aes-in-ecb-mode (pad (concat bytes mystery-suffix)) consistent-rand-key))
+  (set1/encrypt-aes-in-ecb-mode (pad (concat bytes mystery-message)) consistent-rand-key))
 
 ;; What you have now is a function that produces:
 
@@ -161,19 +161,26 @@
 ;; with 1 byte ("A"), then "AA", then "AAA" and so on. Discover the block size
 ;; of the cipher. You know it, but do this step anyway.
 
+(defn detect-repeated-blocks
+  "Returns the size of the two repeated blocks at the beginning of bytes, or
+  nil if there is no such repetition."
+  [bytes]
+  (if (empty? bytes)
+    nil
+    (first (filter #(= (nth-block bytes % 0)
+                       (nth-block bytes % 1))
+                   (range 1 2048)))))
+
 (defn detect-block-size
   "Given an encryption function, detect the block size of the cipher."
   [f]
-  (loop [bytes '(120)
-         block-size 1]
-    (let [enc (f bytes)]
+  (loop [bytes '(120)]
+    (let [enc (f bytes)
+          repeated-block-size (detect-repeated-blocks enc)]
       (cond
-       (= (take block-size enc) (take block-size (drop block-size enc))) block-size
-       (> block-size 2048) (throw (Exception. "oops, block too big"))
-       :else (recur (conj bytes 120) (inc block-size))))))
-      ;; (if (= (take block-size enc) (take block-size (drop block-size enc)))
-      ;;   block-size
-      ;;   (recur (conj bytes 120))))))
+       (not (nil? repeated-block-size)) repeated-block-size
+       (> (count bytes) 2048) (throw (Exception. "oops, block too big"))
+       :else (recur (conj bytes 120))))))
 
 ;; 2. Detect that the function is using ECB. You already know, but do this step
 ;; anyways.
@@ -191,10 +198,50 @@
 
 ;; 6. Repeat for the next byte.
 
-;; (defn decrypt-mystery-suffix
-;;   (let [block-size (detect-block-size encrypt-ecb-unknown-key)
-;;         input-block (repeat 120 (dec block-size)) ; "xxx...", one short of block size
-;;         algorithm (detect-block-cipher-mode (encrypt-ecb-unknown-key (repeat 
+;; Notes:
+;; * blocks can be shuffled
+;;
+;; blocks 0000 1111 2222 3333 4444
+;;   text AAAR esto fthe mess age*
+;;   text AARe stof them essa ge**
+;;   text ARes toft heme ssag e***
+;;   text Rest ofth emes sage
+;;   text Rest Rest ofth emes sage
+;;
+;;   text est? AAAR esto fthe mess age*
+
+(defn make-ecb-decrypt-map-entry
+  "Create a seq of two elements that can be used to create a map later:
+  encrypted block (key) and probe byte (value)."
+  [block-size input-block probe-byte]
+  (let [probe (conj (vec input-block) probe-byte)
+        encoded (encrypt-ecb-unknown-key probe)
+        block (first-block encoded block-size)]
+    (list block probe-byte)))
+
+(defn decrypt-mystery-message
+  "Decrypt the mystery message using an ECB known text block attack."
+  []
+  (let [block-size (detect-block-size encrypt-ecb-unknown-key)
+        algorithm (detect-block-cipher-mode
+                   (encrypt-ecb-unknown-key (repeat 48 120)))] ; "X" * 48
+    (assert (= :ecb algorithm))
+    (loop [decrypted-bytes []]
+      (if (= (count decrypted-bytes) block-size)
+        decrypted-bytes
+        (let [n (- block-size (count decrypted-bytes) 1)
+              input-block (repeat n 120) ; XXX...
+              byte-block-dict (apply hash-map
+                                     (mapcat #(make-ecb-decrypt-map-entry
+                                               block-size
+                                               ; XXXAnswerSoFar (length = block size - 1)
+                                               (concat input-block decrypted-bytes)
+                                               %)
+                                             (range 0 256)))
+              mystery-byte (get byte-block-dict
+                                (first-block (encrypt-ecb-unknown-key input-block) block-size))]
+          (recur (conj decrypted-bytes mystery-byte)))))))
+
 
 ;; ** Congratulations.
 
@@ -203,3 +250,51 @@
 ;; can see penguins through it. Not so many of them can decrypt the contents of
 ;; those ciphertexts, and now you can. If our experience is any guideline, this
 ;; attack will get you code execution in security tests about once a year.
+
+;;; ================ 13 ================
+
+;;; ECB cut-and-paste
+
+;; Write a k=v parsing routine, as if for a structured cookie. The routine
+;; should take:
+
+;; foo=bar&baz=qux&zap=zazzle
+;; ... and produce:
+
+;; {
+;;   foo: 'bar',
+;;   baz: 'qux',
+;;   zap: 'zazzle'
+;; }
+
+;; (you know, the object; I don't care if you convert it to JSON).
+
+;; Now write a function that encodes a user profile in that format, given an
+;; email address. You should have something like:
+
+;; profile_for("foo@bar.com")
+;; ... and it should produce:
+
+;; {
+;;   email: 'foo@bar.com',
+;;   uid: 10,
+;;   role: 'user'
+;; }
+;; ... encoded as:
+
+;; email=foo@bar.com&uid=10&role=user
+
+;; Your "profile_for" function should not allow encoding metacharacters (&
+;; and =). Eat them, quote them, whatever you want to do, but don't let
+;; people set their email address to "foo@bar.com&role=admin".
+
+;; Now, two more easy functions. Generate a random AES key, then:
+
+;; Encrypt the encoded user profile under the key; "provide" that to
+;; the "attacker".
+
+;; Decrypt the encoded user profile and parse it.
+
+;; Using only the user input to profile_for() (as an oracle to
+;; generate "valid" ciphertexts) and the ciphertexts themselves, make a
+;; role=admin profile.

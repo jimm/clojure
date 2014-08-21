@@ -24,3 +24,14 @@
       (dotimes [_ 10]
         (let [[alg enc-bytes] (encryption-oracle plaintext-bytes)]
           (is (= (detect-block-cipher-mode enc-bytes) alg)))))))
+
+(deftest detect-repeated-blocks-test
+  (testing "detection of repeated blocks"
+    (is (= (detect-repeated-blocks '(1 2 3 1 2 3)) 3))
+    (is (= (detect-repeated-blocks '(1 2 3 1 2 3 4 5 6 7 1 2 3)) 3))
+    (is (= (detect-repeated-blocks '(1 2 3 4 5)) nil))
+    (is (= (detect-repeated-blocks '()) nil))))
+
+(deftest detect-block-size-test
+  (testing "block size detection"
+    (is (= (detect-block-size encrypt-ecb-unknown-key) 16))))
