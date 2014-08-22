@@ -1,5 +1,6 @@
 (ns cryptopals.set2
   (:use [cryptopals.util])
+  (:require [clojure.string :as str])
   (:require [cryptopals.set1 :as set1]))
 
 ;; For the REPL:
@@ -199,55 +200,70 @@
 ;; 6. Repeat for the next byte.
 
 ;; Notes:
-;; * blocks can be shuffled
 ;;
 ;; blocks 0000 1111 2222 3333 4444
-;;   text AAAR esto fthe mess age*
-;;   text AARe stof them essa ge**
-;;   text ARes toft heme ssag e***
-;;   text Rest ofth emes sage
-;;   text Rest Rest ofth emes sage
 ;;
-;;   text est? AAAR esto fthe mess age*
+;;        AAAR esto fthe mess age*
+;;        AARe stof them essa ge**
+;;        ARes toft heme ssag e***
+;;        Rest ofth emes sage
+;;
+;;        est? AAAR esto fthe mess age*
+;;        sto? AARe stof them essa ge**
+;;        tof? ARes toft heme ssag e**
+;;        oft? Rest ofth emes sage
 
 (defn make-ecb-decrypt-map-entry
   "Create a seq of two elements that can be used to create a map later:
   encrypted block (key) and probe byte (value)."
-  [block-size input-block probe-byte]
-  (let [probe (conj (vec input-block) probe-byte)
-        encoded (encrypt-ecb-unknown-key probe)
+  [block-size probe probe-byte]
+  (let [encoded (encrypt-ecb-unknown-key probe)
         block (first-block encoded block-size)]
     (list block probe-byte)))
 
-(defn decrypt-mystery-message-block
-  [block-num block-size decrypted-bytes]
-        ;; TODO
-  (loop [decrypted-bytes decrypted-bytes]
-    (let [n (- block-size (count decrypted-bytes) 1)
-          input-block (if (zero? block-num)
-                        (repeat n 120) ; XXX...
-                        (take n (nth-block decrypted-bytes block-size block-num)))
-          byte-block-dict (apply hash-map
-                                 (mapcat #(make-ecb-decrypt-map-entry
-                                           block-size
-                                        ; XXXAnswerSoFar (length = block size - 1)
-                                           (concat input-block decrypted-bytes)
-                                           %)
-                                         (range 0 256)))
-; FIXME
-          mystery-byte (get byte-block-dict
-                            (nth-block (encrypt-ecb-unknown-key input-block) block-size block-num))]
-      (recur (conj decrypted-bytes mystery-byte)))))
+(defn decrypt-mystery-ecb-message-block
+  ;; TODO pre-calculate encryption of "xxxx", "xxx", "xx", "x and pass that in to this func
+  [block-num block-size decrypted-bytes encrypted-x-blocks]
+  (loop [n (dec block-size)
+         decrypted-bytes (vec decrypted-bytes)]
+    (if (neg? n)
+      decrypted-bytes
+      (let [probe-prefix (vec (if (zero? block-num)
+                                (concat (repeat n 120) ; XXX...
+                                        (take (- (dec block-size) n) decrypted-bytes))
+                                (drop (+ (* (dec block-num) block-size)
+                                         (- block-size n))
+                                      decrypted-bytes)))
+            byte-block-dict (apply hash-map
+                                   (mapcat #(make-ecb-decrypt-map-entry
+                                             block-size
+                                             (conj probe-prefix %)
+                                             %)
+                                           (range 0 256)))
+            mystery-byte (get byte-block-dict
+                              ;; TODO use passed-in pre-encrypted block
+                              (nth-block (nth encrypted-x-blocks n)
+                                         block-size
+                                         block-num))]
+        (if (nil? mystery-byte)
+          decrypted-bytes
+          (recur (dec n)
+                 (conj decrypted-bytes mystery-byte)))))))
 
-(defn decrypt-mystery-message
+(defn decrypt-mystery-ecb-message
   "Decrypt the mystery message using an ECB known text block attack."
   []
   (let [ciphertext-size (count (encrypt-ecb-unknown-key '()))
         block-size (detect-block-size encrypt-ecb-unknown-key)
         algorithm (detect-block-cipher-mode
-                   (encrypt-ecb-unknown-key (repeat 48 120)))] ; "X" * 48
+                   (encrypt-ecb-unknown-key (repeat 48 120))) ; "X" * 48
+        encrypted-x-blocks (map #(encrypt-ecb-unknown-key (repeat % 120))
+                                (range block-size))]
     (assert (= :ecb algorithm))
     (assert (zero? (rem ciphertext-size block-size)))
+
+  ;; TODO pre-calculate encryption of "xxxx", "xxx", "xx", "x" before the
+  ;; loop and pass that in to decrypt-mystery-ecb-message-block.
 
     (loop [block-num 0
            ciphertext-size ciphertext-size
@@ -256,12 +272,10 @@
         decrypted-bytes
         (recur (inc block-num)
                (- ciphertext-size block-size)
-               (concat decrypted-bytes
-                       (decrypt-mystery-message-block
-                        block-num
-                        block-size
-                        decrypted-bytes)))))))
-
+               (decrypt-mystery-ecb-message-block block-num
+                                                  block-size
+                                                  decrypted-bytes
+                                                  encrypted-x-blocks))))))
 
 ;; ** Congratulations.
 
@@ -289,6 +303,15 @@
 
 ;; (you know, the object; I don't care if you convert it to JSON).
 
+(defn parse-get-params
+  [^String s]
+  (if (empty? s)
+    {}
+    (let [kvs (str/split s #"&")]
+      (apply hash-map (mapcat #(let [[k v] (str/split % #"=")]
+                                 (list k (java.net.URLDecoder/decode v)))
+                              kvs)))))
+
 ;; Now write a function that encodes a user profile in that format, given an
 ;; email address. You should have something like:
 
@@ -307,6 +330,24 @@
 ;; Your "profile_for" function should not allow encoding metacharacters (&
 ;; and =). Eat them, quote them, whatever you want to do, but don't let
 ;; people set their email address to "foo@bar.com&role=admin".
+
+(defn url-encode
+  [^String s]
+  (java.net.URLEncoder/encode s))
+
+(defn to-get-params
+  [m]
+  (str/join "&"
+            (map (fn [[k v]] (str (url-encode k) "=" (url-encode (str v))))
+                 m)))
+
+(defn email-to-user
+  [email]
+  {"email" email, "uid" (rand-int 1000), "role" "user"})
+
+(defn email-to-user-params
+  [email]
+  (-> email email-to-user to-get-params))
 
 ;; Now, two more easy functions. Generate a random AES key, then:
 

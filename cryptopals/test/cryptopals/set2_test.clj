@@ -35,3 +35,38 @@
 (deftest detect-block-size-test
   (testing "block size detection"
     (is (= (detect-block-size encrypt-ecb-unknown-key) 16))))
+
+;; This takes around 2.5 second to run, but it works
+
+;; (deftest decrypt-mystery-ecb-message-test
+;;   (testing "decryption of ECB mystery message"
+;;     ;; ignore padding at end
+;;     (is (= (take (count mystery-message) (decrypt-mystery-ecb-message))
+;;            (str-to-bytes mystery-message)))))
+
+(deftest url-munging-test
+  (testing "decoding get params into map"
+    (is (= (parse-get-params "foo=bar") {"foo" "bar"}))
+    (is (= (parse-get-params "foo=bar+bar") {"foo" "bar bar"}))
+    (is (= (parse-get-params "foo=bar%20bar") {"foo" "bar bar"}))
+    (is (= (parse-get-params "") {}))
+    (is (= (parse-get-params "foo=bar&baz=bletch") {"foo" "bar", "baz" "bletch"})))
+
+  (testing "url encoding strings"
+    (is (= (url-encode "") ""))
+    (is (= (url-encode "abc") "abc"))
+    (is (= (url-encode "abc&def") "abc%26def"))
+    (let [has-space (url-encode "abc def")]
+      (is (or (= has-space "abc%20def")
+              (= has-space "abc+def")))))
+
+  (testing "encoding map into get params"
+    (is (= (to-get-params {}) ""))
+    (is (= (to-get-params {"a" "b"}) "a=b"))
+    (is (= (to-get-params {"a" 42}) "a=42"))
+    (let [m {"foo" "bar", "baz" "bletch"}
+          params (to-get-params m)
+          s1 "foo=bar&baz=bletch"
+          s2 "baz=bletch&foo=bar"]
+      (is (or (= params s1)
+              (= params s2))))))
