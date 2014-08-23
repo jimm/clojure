@@ -41,7 +41,7 @@
 ;; (deftest decrypt-mystery-ecb-message-test
 ;;   (testing "decryption of ECB mystery message"
 ;;     ;; ignore padding at end
-;;     (is (= (take (count mystery-message) (decrypt-mystery-ecb-message))
+;;     (is (= (take (count mystery-message) (decrypt-mystery-ecb-message ))
 ;;            (str-to-bytes mystery-message)))))
 
 (deftest url-munging-test

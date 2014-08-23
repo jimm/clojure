@@ -216,14 +216,14 @@
 (defn make-ecb-decrypt-map-entry
   "Create a seq of two elements that can be used to create a map later:
   encrypted block (key) and probe byte (value)."
-  [block-size probe probe-byte]
-  (let [encoded (encrypt-ecb-unknown-key probe)
+  [enc-func block-size probe probe-byte]
+  (let [encoded (enc-func probe)
         block (first-block encoded block-size)]
     (list block probe-byte)))
 
 (defn decrypt-mystery-ecb-message-block
   ;; TODO pre-calculate encryption of "xxxx", "xxx", "xx", "x and pass that in to this func
-  [block-num block-size decrypted-bytes encrypted-x-blocks]
+  [enc-func block-num block-size decrypted-bytes encrypted-x-blocks]
   (loop [n (dec block-size)
          decrypted-bytes (vec decrypted-bytes)]
     (if (neg? n)
@@ -236,6 +236,7 @@
                                       decrypted-bytes)))
             byte-block-dict (apply hash-map
                                    (mapcat #(make-ecb-decrypt-map-entry
+                                             enc-func
                                              block-size
                                              (conj probe-prefix %)
                                              %)
@@ -251,13 +252,14 @@
                  (conj decrypted-bytes mystery-byte)))))))
 
 (defn decrypt-mystery-ecb-message
-  "Decrypt the mystery message using an ECB known text block attack."
-  []
-  (let [ciphertext-size (count (encrypt-ecb-unknown-key '()))
-        block-size (detect-block-size encrypt-ecb-unknown-key)
+  "Decrypt the mystery message using an ECB known text block attack.
+  Example: (decrypt-mystery-ecb-message encrypt-ecb-unknown-key)"
+  [enc-func]
+  (let [ciphertext-size (count (enc-func '()))
+        block-size (detect-block-size enc-func)
         algorithm (detect-block-cipher-mode
-                   (encrypt-ecb-unknown-key (repeat 48 120))) ; "X" * 48
-        encrypted-x-blocks (map #(encrypt-ecb-unknown-key (repeat % 120))
+                   (enc-func (repeat 48 120))) ; "X" * 48
+        encrypted-x-blocks (map #(enc-func (repeat % 120))
                                 (range block-size))]
     (assert (= :ecb algorithm))
     (assert (zero? (rem ciphertext-size block-size)))
@@ -272,7 +274,8 @@
         decrypted-bytes
         (recur (inc block-num)
                (- ciphertext-size block-size)
-               (decrypt-mystery-ecb-message-block block-num
+               (decrypt-mystery-ecb-message-block enc-func
+                                                  block-num
                                                   block-size
                                                   decrypted-bytes
                                                   encrypted-x-blocks))))))
@@ -354,7 +357,18 @@
 ;; Encrypt the encoded user profile under the key; "provide" that to
 ;; the "attacker".
 
+(defn encrypt-user
+  []
+  (let [user (email-to-user "spongebob@example.com")
+        params (to-get-params user)
+        rand-key (take 16 (repeatedly #(rand-int 255)))]
+    (set1/encrypt-aes-in-ecb-mode (pad (str-to-bytes params)) rand-key)))
+    
 ;; Decrypt the encoded user profile and parse it.
+
+;; (defn decrypt-user
+;;   [bytes]
+;;   (
 
 ;; Using only the user input to profile_for() (as an oracle to
 ;; generate "valid" ciphertexts) and the ciphertexts themselves, make a
