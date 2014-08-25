@@ -222,7 +222,6 @@
     (list block probe-byte)))
 
 (defn decrypt-mystery-ecb-message-block
-  ;; TODO pre-calculate encryption of "xxxx", "xxx", "xx", "x and pass that in to this func
   [enc-func block-num block-size decrypted-bytes encrypted-x-blocks]
   (loop [n (dec block-size)
          decrypted-bytes (vec decrypted-bytes)]
@@ -242,7 +241,6 @@
                                              %)
                                            (range 0 256)))
             mystery-byte (get byte-block-dict
-                              ;; TODO use passed-in pre-encrypted block
                               (nth-block (nth encrypted-x-blocks n)
                                          block-size
                                          block-num))]
@@ -263,9 +261,6 @@
                                 (range block-size))]
     (assert (= :ecb algorithm))
     (assert (zero? (rem ciphertext-size block-size)))
-
-  ;; TODO pre-calculate encryption of "xxxx", "xxx", "xx", "x" before the
-  ;; loop and pass that in to decrypt-mystery-ecb-message-block.
 
     (loop [block-num 0
            ciphertext-size ciphertext-size
