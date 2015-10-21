@@ -5,7 +5,7 @@
 
 (MidiSystem/getReceiver)
 
-(def song (MidiSystem/getSequence (java.io.File. "/Users/jimm/src/github/midilib/examples/NoFences.mid")))
+(def song (MidiSystem/getSequence (java.io.File. (str (System/getenv "HOME") "/src/github/midilib/examples/NoFences.mid"))))
 (map #(.size %) (.getTracks song))
 
 ;;; ================ System ================
