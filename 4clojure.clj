@@ -3861,13 +3861,14 @@
   ;;; TODO correct but too slow with arg of 5000
   (fn [n]
     (loop [n n
-           result #{""}]
-      (if (zero? n) (set result)
-          (recur (dec n) (set
-                          (mapcat #(for [i (range (inc (count %)))
-                                         j (range i (inc (count %)))]
-                                     (str (subs % 0 i) "(" (subs % i j) ")" (subs % j)))
-                                  result))))))
+           result #{[]}]
+      (if (zero? n) result ; (map #(apply str %) result))
+          (recur (dec n)
+                 (set
+                  (mapcat #(for [i (range (inc (count %)))
+                                 j (range i (inc (count %)))]
+                             (vec (concat (subvec % 0 i) [\(] (subvec % i j) [\)] (subvec % j))))
+                          result))))))
   )
 
 (and
