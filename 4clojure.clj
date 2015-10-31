@@ -3853,24 +3853,41 @@
 ;;;
 ;;; There is an interesting pattern in the numbers!
 
-;;; () => {}() ({}) (){}
-;;; ()() => ()()() (())()() ()(())() ()()(()) (()())
-;;; (()) => (()()) ((())) (()()) (())() ((()))
+;;; Binary representation of min and max values for n, where n = 4
+;;; min 10000000
+;;; max 11111111
+;;; --- but really ---
+;;; min 10101010
+;;; max 11110000
 
 (def __
-  ;;; TODO correct but too slow with arg of 5000
   (fn [n]
-    (loop [n n
-           result #{[]}]
-      (if (zero? n) result ; (map #(apply str %) result))
-          (recur (dec n)
-                 (set
-                  (mapcat #(for [i (range (inc (count %)))
-                                 j (range i (inc (count %)))]
-                             (vec (concat (subvec % 0 i) [\(] (subvec % i j) [\)] (subvec % j))))
-                          result))))))
+    (letfn [(balanced-str ; both check for balanced and convert to parens
+                [^Integer i]
+              (loop [i i
+                     balance-num 0
+                     balanced-chars (transient [])]
+                (cond (zero? i) (if (zero? balance-num)
+                                  (apply str (reverse (persistent! balanced-chars)))
+                                  nil)
+                      (or (neg? balance-num) (> balance-num n)) nil
+                      :else (let [zero-bit (zero? (bit-and i 1))]
+                              (recur (bit-shift-right i 1)
+                                     (if zero-bit (inc balance-num)
+                                         (dec balance-num))
+                                     (conj! balanced-chars (if zero-bit \) \()))))))]
+      (if (zero? n) #{""}
+          (into #{}
+                ;; Range: 1010...10 --  111...000 (range 2nd arg needs to be +1)
+                (for [i (range (Integer/parseInt (apply str (repeat n "10")) 2)
+                               (inc (bit-shift-left (int (dec (Math/pow 2 n))) n))
+                               2)       ; can skip odd numbers
+                      :let [bal-str-or-nil (balanced-str i)]
+                      :when bal-str-or-nil]
+                  bal-str-or-nil)))))
   )
 
+(defn test []
 (and
  (= [#{""} #{"()"} #{"()()" "(())"}] (map (fn [n] (__ n)) [0 1 2]))
  (= #{"((()))" "()()()" "()(())" "(())()" "(()())"} (__ 3))
@@ -3878,3 +3895,4 @@
  (= (nth (sort (filter #(.contains ^String % "(()()()())") (__ 9))) 6) "(((()()()())(())))")
  (= (nth (sort (__ 12)) 5000) "(((((()()()()()))))(()))")
  )
+)
