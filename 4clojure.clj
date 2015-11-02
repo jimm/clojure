@@ -3854,15 +3854,16 @@
 ;;; There is an interesting pattern in the numbers!
 
 ;;; Binary representation of min and max values for n, where n = 4
-;;; min 10000000
-;;; max 11111111
-;;; --- but really ---
-;;; min 10101010
-;;; max 11110000
+;;; because it must start with 1 and end with 0:
+;;;     min 10000000
+;;;     max 11111111
+;;; But they must have 4 1's, so we can further restrict min and max.
+;;;     min 10101010
+;;;     max 11110000
 
 (def __
   (fn [n]
-    (letfn [(balanced-str ; both check for balanced and convert to parens
+     (letfn [(balanced-str ; both check for balanced and convert to parens
                 [^Integer i]
               (loop [i i
                      balance-num 0
@@ -3870,22 +3871,23 @@
                 (cond (zero? i) (if (zero? balance-num)
                                   (apply str (reverse (persistent! balanced-chars)))
                                   nil)
-                      (or (neg? balance-num) (> balance-num n)) nil
+                      (or (< 0 balance-num) (> balance-num n)) nil
                       :else (let [zero-bit (zero? (bit-and i 1))]
                               (recur (bit-shift-right i 1)
                                      (if zero-bit (inc balance-num)
                                          (dec balance-num))
                                      (conj! balanced-chars (if zero-bit \) \()))))))]
       (if (zero? n) #{""}
-          (into #{}
-                ;; Range: 1010...10 --  111...000 (range 2nd arg needs to be +1)
+          (set
+                ;; Range: 1010...10 --  (inc 111...000) (range 2nd arg needs to be +1)
                 (for [i (range (Integer/parseInt (apply str (repeat n "10")) 2)
-                               (inc (bit-shift-left (int (dec (Math/pow 2 n))) n))
+                               (inc (bit-shift-left (dec (int (Math/pow 2 n))) n))
                                2)       ; can skip odd numbers
                       :let [bal-str-or-nil (balanced-str i)]
                       :when bal-str-or-nil]
                   bal-str-or-nil)))))
   )
+
 
 (defn test []
 (and
