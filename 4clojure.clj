@@ -3863,7 +3863,7 @@
 
 (def __
   (fn [n]
-     (letfn [(balanced-str ; both check for balanced and convert to parens
+    (letfn [(balanced-str ; both check for balanced and convert to parens
                 [^Integer i]
               (loop [i i
                      balance-num 0
@@ -3871,7 +3871,7 @@
                 (cond (zero? i) (if (zero? balance-num)
                                   (apply str (reverse (persistent! balanced-chars)))
                                   nil)
-                      (or (< 0 balance-num) (> balance-num n)) nil
+                      (or (neg? balance-num) (> balance-num n)) nil
                       :else (let [zero-bit (zero? (bit-and i 1))]
                               (recur (bit-shift-right i 1)
                                      (if zero-bit (inc balance-num)
@@ -3879,13 +3879,13 @@
                                      (conj! balanced-chars (if zero-bit \) \()))))))]
       (if (zero? n) #{""}
           (set
-                ;; Range: 1010...10 --  (inc 111...000) (range 2nd arg needs to be +1)
-                (for [i (range (Integer/parseInt (apply str (repeat n "10")) 2)
-                               (inc (bit-shift-left (dec (int (Math/pow 2 n))) n))
-                               2)       ; can skip odd numbers
-                      :let [bal-str-or-nil (balanced-str i)]
-                      :when bal-str-or-nil]
-                  bal-str-or-nil)))))
+           ;; Range: 1010...10 --  111...000 (range 2nd arg needs to be +1)
+           (for [i (range (Integer/parseInt (apply str (repeat n "10")) 2)
+                          (inc (bit-shift-left (dec (int (Math/pow 2 n))) n))
+                          2)       ; can skip odd numbers
+                 :let [bal-str-or-nil (balanced-str i)]
+                 :when bal-str-or-nil]
+             bal-str-or-nil)))))
   )
 
 
