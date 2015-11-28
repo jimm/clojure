@@ -16,7 +16,9 @@
 ;;; https://github.com/arirusso/midi-jruby/blob/master/lib/midi-jruby/device.rb
 (defn all-devices-by-type
   []
-  (letfn [(new-device [count device info type] (Device. count device (.getName info) (.getDescription info) (.getVendor info) type {}))]
+  (letfn [(new-device [count device info type]
+            (Device. count device (.getName info) (.getDescription info)
+                     (.getVendor info) type {}))]
     (loop [count 0
            devices {:input [], :output []}
            infos (MidiSystem/getMidiDeviceInfo)]
