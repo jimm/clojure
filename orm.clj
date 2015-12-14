@@ -1,11 +1,12 @@
 ;;; See the find-all docs below. You need to (re)define *db-conn*.
+;;; You'll also need to add this dependency to your project.clj:
+;;      [org.clojure/java.jdbc "0.4.2"]
 ;;;
 ;;; See also http://github.com/duelinmarkers/clj-record
 ;;;
 ;;; TODO let joins use seq insetad of string
-
 (ns jimm.orm
-  (:use [clojure.contrib.sql :as sql]))
+  (:require [clojure.java.jdbc :as sql]))
 
 (def *db-conn* {:classname "com.mysql.jdbc.Driver"
                 :subprotocol "mysql"
@@ -91,8 +92,3 @@
   "Returns the record that has the specified id."
   [table id]
   (find-first table {:where ["id = ?" id]}))
-
-(defn schema-version
-  "Returns schema version number from schema_version table."
-  []
-  (:version (find-first "schema_version" {:select "max(version) as version"})))

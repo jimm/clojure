@@ -1,14 +1,14 @@
 (ns midilib)
-(def *debug* nil)
+(def debug nil)
 
-(def *key-names* '("C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"))
+(def key-names '("C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"))
 
-(def *microsecs-per-minute* (* 1000000 60))
+(def microsecs-per-minute (* 1000000 60))
 
 ; This map's keys are status byte high nibbles, and the values are either the
 ; number of bytes needed (1 or 2) for a channel message or 0 if it's not a
 ; channel message.
-(def *num-data-bytes* 
+(def num-data-bytes 
      {0x00 0, 0x10 0, 0x20 0, 0x30 0, 0x40 0, 0x50 0, 0x60 0, 0x70 0,
       0x80 2, 0x90 2, 0xa0 2, 0xb0 2, 0xc0 1, 0xd0 1, 0xe0 2, 0xf0 0})
 
@@ -54,7 +54,7 @@
   [num]
   (let [note (rem num 12)
         octave (quot num 12)]
-    (str (nth *key-names* note) octave)))
+    (str (nth key-names note) octave)))
 
 (defn
   #^{:doc "Given a value, return a vector of byte values containing the MIDI
@@ -88,18 +88,19 @@
 (defn bpm->mpq
   "Translates beats per minute to microseconds per quarter note (beat)."
   [bpm]
-  (/ *microsecs-per-minute* bpm))
+  (/ microsecs-per-minute bpm))
 
 (defn mpq->bpm
   "Translates microseconds per quarter note (beat) to beats per minute."
   [mpq]
-  (/ *microsecs-per-minute* mpq))
+  (/ microsecs-per-minute mpq))
 
 
 (defn error
   "Error handler. Prints error message to *err*."
   [s]
-  (.println *err* (str "error: " s)))
+  (.println *err* (str "error: " s))
+  (throw (Error. s)))                   ; DEBUG
 
 (defn getc
   "Read a single character from in and return it. Calls error if EOF is seen."
@@ -156,6 +157,7 @@
 (defn- eat-remaining-bytes
   [mfr]
   (let [nbytes (:bytes-to-be-read @mfr)]
+    (println "  eat-remaining-bytes nbytes" nbytes) ; DEBUG
     (when (> nbytes 0)
       (dotimes [_ nbytes] (getc mfr)))))
 
@@ -167,13 +169,14 @@
   [mfr running status c1 c2]
   (let [high-nibble (bit-and status 0xf0)
         chan (bit-and status 0x0f)]
-    (cond (= high-nibble *NOTE-ON*) (call-handler mfr :note-on chan c1 c2)
-          (= high-nibble *NOTE-OFF*) (call-handler mfr :note-off chan c1 c2)
-          (= high-nibble *POLY-PRESSURE*) (call-handler mfr :poly-pressure chan c1 c2)
-          (= high-nibble *CONTROLLER*) (call-handler mfr :controller chan c1 c2)
-          (= high-nibble *PITCH-BEND*) (call-handler mfr :pitch-bend chan c1 c2)
-          (= high-nibble *PROGRAM-CHANGE*) (call-handler mfr :program-change chan c1)
-          (= high-nibble *CHANNEL-PRESSURE*) (call-handler mfr :channel-pressure chan c1)
+    (println "channel-message high-nibble" high-nibble "chan" chan) ; DEBUG
+    (cond (= high-nibble NOTE-ON) (call-handler mfr :note-on chan c1 c2)
+          (= high-nibble NOTE-OFF) (call-handler mfr :note-off chan c1 c2)
+          (= high-nibble POLY-PRESSURE) (call-handler mfr :poly-pressure chan c1 c2)
+          (= high-nibble CONTROLLER) (call-handler mfr :controller chan c1 c2)
+          (= high-nibble PITCH-BEND) (call-handler mfr :pitch-bend chan c1 c2)
+          (= high-nibble PROGRAM-CHANGE) (call-handler mfr :program-change chan c1)
+          (= high-nibble CHANNEL-PRESSURE) (call-handler mfr :channel-pressure chan c1)
           true (error (format "illegal chan message 0x%02x" high-nibble)))))
 
 ;;; ================================================================
@@ -195,9 +198,21 @@
   [mfr]
   (let [type (getc mfr)]
     (msg-init mfr)
-    (msg-read mfr (read-varlen mfr))
-    ; TODO
-  ))
+    (let [bytes (msg-read mfr (read-varlen mfr))]
+      ;; TODO
+      (case type
+        META-SEQ-NUM nil
+        (META-TEXT META-COPYRIGHT META-SEQ-NAME META-INSTRUMENT
+          META-LYRIC META-MARKER META-CUE 0x08 0x09 0x0a
+          0x0b 0x0c 0x0d 0x0e 0x0f) nil
+        META-TRACK-END nil
+        META-SET-TEMPO nil
+        META-SMPTE nil
+        META-TIME-SIG nil
+        META-KEY-SIG nil
+        META-SEQ-SPECIF nil
+        nil)                            ; meta-misc
+  )))
 
 (defn msg-add
   [huh]
@@ -217,9 +232,9 @@
 (defn sysex
   [mfr sysex-continue]
   (msg-init mfr)
-  (msg-add *SYSEX*)
+  (msg-add SYSEX)
   (let [c (msg-read mfr (read-varlen mfr))]
-    (if (or (= c *EOX*) (not (:no-merge @mfr)))
+    (if (or (= c EOX) (not (:no-merge @mfr)))
       (handle-sysex (msg mfr))
       (ref-set sysex-continue true))))
 
@@ -234,15 +249,16 @@
     (msg-init mfr))
   (let [c (msg-read mfr (read-varlen mfr))]
     (cond (not @sysex-continue) (handle-arbitrary (msg mfr))
-          (= c *EOX*) (do
+          (= c EOX) (do
                         (handle-sysex (msg mfr))
                         (ref-set sysex-continue false)))))
 
 (defn system-message
   [mfr c sysex-continue]
-  (cond (= c *META-EVENT*) (meta-event mfr)
-        (= c *SYSEX*) (sysex mfr sysex-continue)
-        (= c *EOX*) (eox mfr sysex-continue)
+  (println "system-message c" c) ; DEBUG
+  (cond (= c META-EVENT) (meta-event mfr)
+        (= c SYSEX) (sysex mfr sysex-continue)
+        (= c EOX) (eox mfr sysex-continue)
         true (error (format "unexpected byte: 0x%02x" c))))
 
 ;;; ================================================================
@@ -267,7 +283,7 @@
                     :curr-ticks curr-ticks
                     :ticks-so-far (+ (:ticks-so-far @mfr) curr-ticks))
              (let [c (getc mfr)]
-               (when (and @sysex-continue (not= c *EOX*))
+               (when (and @sysex-continue (not= c EOX))
                  (error "didn't find expected continuation of a sysex"))
 
                (if (zero? (bit-and c 0x80)) ; running status
@@ -279,7 +295,7 @@
                    (ref-set status c)
                    (ref-set running nil)))
 
-               (let [needed (*num-data-bytes* (bit-and @status 0xf0))]
+               (let [needed (num-data-bytes (bit-and @status 0xf0))]
                  (if-not (zero? needed) ; i.e., is it a channel message?
                    (let [c1 (if @running c (bit-and (getc mfr) 0x7f))]
                      ; The "& 0x7f" here may seem unnecessary, but I've seen
@@ -288,6 +304,7 @@
                      ; proper data.
                      (channel-message mfr @running @status c1 (if (> needed 1) (bit-and (getc mfr) 0x7f) 0)))
                    (system-message mfr c sysex-continue))))))
+    (println "in read-track eating remaining bytes") ; DEBUG
     (eat-remaining-bytes mfr)
     (call-handler mfr :end-track track)))
 

@@ -77,9 +77,9 @@
   [mfr type msg]
   (pdelta mfr)
   (println
-   (cond (= type midilib/*META-SEQ-NAME*) ("seq or track name" msg)
-         (= type midilib/*META-INSTRUMENT*) ("instrument name" msg)
-         (= type midilib/*META-MARKER*) ("marker" msg)
+   (cond (= type midilib/META-SEQ-NAME) ("seq or track name" msg)
+         (= type midilib/META-INSTRUMENT) ("instrument name" msg)
+         (= type midilib/META-MARKER) ("marker" msg)
          true (str "text = " msg ", type = " type))))
 
 (defn eot

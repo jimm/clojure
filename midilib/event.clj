@@ -29,181 +29,164 @@
 (defprotocol Note)
 
 (deftype NoteOff [delta-time time-from-start chan note vel]
-  :as this
   Note
   Channel
   Event
-  (data-as-bytes [] [(+ *NOTE-OFF* chan) note vel])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ NOTE-OFF chan) note vel])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (NoteOff new-dt new-tfs chan note vel)))
-  (to-s [] (str "Note Off" chan note vel)))
+     (NoteOff. new-dt new-tfs chan note vel)))
+  (to-s [e] (str "Note Off" chan note vel)))
 
 (deftype NoteOn [delta-time time-from-start chan note vel]
-  :as this
   Note
   Channel
   Event
-  (data-as-bytes [] [(+ *NOTE-ON* chan) note vel])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ NOTE-ON chan) note vel])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (NoteOn new-dt new-tfs chan note vel)))
-  (to-s [] (str "Note On" chan note vel)))
+     (NoteOn. new-dt new-tfs chan note vel)))
+  (to-s [e] (str "Note On" chan note vel)))
 
 (deftype PolyPressure [delta-time time-from-start chan note vel]
-  :as this
   Note
   Channel
   Event
-  (data-as-bytes [] [(+ *POLY-PRESSURE* chan) note vel])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ POLY-PRESSURE chan) note vel])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (PolyPressure new-dt new-tfs chan note vel)))
-  (to-s [] (str "Poly Press" chan note vel)))
+     (PolyPressure. new-dt new-tfs chan note vel)))
+  (to-s [e] (str "Poly Press" chan note vel)))
 
 (deftype Controller [delta-time time-from-start chan controller value]
-  :as this
   Channel
   Event
-  (data-as-bytes [] [(+ *CONTROLLER* chan) controller value])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ CONTROLLER chan) controller value])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (Controller new-dt new-tfs chan controller value)))
-  (to-s [] (str "Controller" chan controller value)))
+     (Controller. new-dt new-tfs chan controller value)))
+  (to-s [e] (str "Controller" chan controller value)))
 
 (deftype ProgramChange [delta-time time-from-start chan program]
-  :as this
   Channel
   Event
-  (data-as-bytes [] [(+ *PROGRAM-CHANGE* chan) program])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ PROGRAM-CHANGE chan) program])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (ProgramChange new-dt new-tfs chan program)))
-  (to-s [] (str "Prog Chg" chan program)))
+     (ProgramChange. new-dt new-tfs chan program)))
+  (to-s [e] (str "Prog Chg" chan program)))
 
 (deftype ChannelPressure [delta-time time-from-start chan pressure]
-  :as this
   Channel
   Event
-  (data-as-bytes [] [(+ *CHANNEL-PRESSURE* chan) pressure])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ CHANNEL-PRESSURE chan) pressure])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (ChannelPressure new-dt new-tfs chan pressure)))
-  (to-s [] (str "Chan Press" chan pressure)))
+     (ChannelPressure. new-dt new-tfs chan pressure)))
+  (to-s [e] (str "Chan Press" chan pressure)))
 
 (deftype PitchBend [delta-time time-from-start chan value]
-  :as this
   Channel
   Event
-  (data-as-bytes [] [(+ *PITCH-BEND* chan) value])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [(+ PITCH-BEND chan) value])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (PitchBend new-dt new-tfs chan value)))
-  (to-s [] (str "Pitch Bend" chan value)))
+     (PitchBend. new-dt new-tfs chan value)))
+  (to-s [e] (str "Pitch Bend" chan value)))
 
 (defprotocol SystemCommon)
 
 (deftype SystemExclusive [delta-time time-from-start data]
-  :as this
   SystemCommon
   Event
-  (data-as-bytes [] (concat [*SYSEX*] (to-varlen (count data)) data [*EOX*]))
-  (quantize-to [boundary]
+  (data-as-bytes [e] (concat [SYSEX] (to-varlen (count data)) data [EOX]))
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (SystemExclusive new-dt new-tfs data)))
-  (to-s [] (str "System Exclusive" (count data) "bytes")))
+     (SystemExclusive. new-dt new-tfs data)))
+  (to-s [e] (str "System Exclusive" (count data) "bytes")))
 
 (deftype SongPointer [delta-time time-from-start pointer]
-  :as this
   SystemCommon
   Event
-  (data-as-bytes [] [*SONG-POINTER* (bit-and (bit-shift-right pointer 8) 0xff) (bit-and pointer 0xff)])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [SONG-POINTER (bit-and (bit-shift-right pointer 8) 0xff) (bit-and pointer 0xff)])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (SongPointer new-dt new-tfs pointer)))
-  (to-s [] (str "Song Pointer" pointer)))
+     (SongPointer. new-dt new-tfs pointer)))
+  (to-s [e] (str "Song Pointer" pointer)))
 
 (deftype SongSelect [delta-time time-from-start song]
-  :as this
   SystemCommon
   Event
-  (data-as-bytes [] [*SONG-SELECT* song])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [SONG-SELECT song])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (SongSelect new-dt new-tfs song)))
-  (to-s [] (str "Song Select" song)))
+     (SongSelect. new-dt new-tfs song)))
+  (to-s [e] (str "Song Select" song)))
 
 (deftype TuneRequest [delta-time time-from-start]
-  :as this
   SystemCommon
   Event
-  (data-as-bytes [] [*TUNE-REQUEST*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [TUNE-REQUEST])
+  (quantize-to [e boundary]
    (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-     (TuneRequest new-dt new-tfs)))
-  (to-s [] "Tune Request"))
+     (TuneRequest. new-dt new-tfs)))
+  (to-s [e] "Tune Request"))
 
 (defprotocol Realtime)
 
 (deftype Clock [delta-time time-from-start]
-  :as this
   Realtime
   Event
-  (data-as-bytes [] [*CLOCK*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [CLOCK])
+  (quantize-to [e boundary]
     (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-      (Clock new-dt new-tfs)))
-  (to-s [] "Clock"))
+      (Clock. new-dt new-tfs)))
+  (to-s [e] "Clock"))
 
 (deftype Start [delta-time time-from-start]
-  :as this
   Realtime
   Event
-  (data-as-bytes [] [*START*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [START])
+  (quantize-to [e boundary]
     (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-      (Start new-dt new-tfs)))
-  (to-s [] "Start"))
+      (Start. new-dt new-tfs)))
+  (to-s [e] "Start"))
 
 (deftype Continue [delta-time time-from-start]
-  :as this
   Realtime
   Event
-  (data-as-bytes [] [*CONTINUE*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [CONTINUE])
+  (quantize-to [e boundary]
     (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-      (Continue new-dt new-tfs)))
-  (to-s [] "Continue"))
+      (Continue. new-dt new-tfs)))
+  (to-s [e] "Continue"))
 
 (deftype Stop [delta-time time-from-start]
-  :as this
   Realtime
   Event
-  (data-as-bytes [] [*STOP*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [STOP])
+  (quantize-to [e boundary]
     (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-      (Stop new-dt new-tfs)))
-  (to-s [] "Stop" ))
+      (Stop. new-dt new-tfs)))
+  (to-s [e] "Stop" ))
 
 (deftype ActiveSense [delta-time time-from-start]
-  :as this
   Realtime
   Event
-  (data-as-bytes [] [*ACTIVE-SENSE*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [ACTIVE-SENSE])
+  (quantize-to [e boundary]
     (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-      (ActiveSense new-dt new-tfs)))
-  (to-s [] "Active Sense"))
+      (ActiveSense. new-dt new-tfs)))
+  (to-s [e] "Active Sense"))
 
 (deftype SystemReset [delta-time time-from-start]
-  :as this
   Realtime
   Event
-  (data-as-bytes [] [*SYSTEM-RESET*])
-  (quantize-to [boundary]
+  (data-as-bytes [e] [SYSTEM-RESET])
+  (quantize-to [e boundary]
     (let [[new-dt new-tfs] (quantize-time-to delta-time time-from-start boundary)]
-      (SystemReset new-dt new-tfs)))
-  (to-s [] "System Reset"))
+      (SystemReset. new-dt new-tfs)))
+  (to-s [e] "System Reset"))
 
 (defprotocol MetaEvent)
 
