@@ -2,6 +2,7 @@
 ;;; You'll also need to add this dependency to your project.clj:
 ;;      [org.clojure/java.jdbc "0.4.2"]
 ;;;
+;;; See also clojure.core/resultset-seq
 ;;; See also http://github.com/duelinmarkers/clj-record
 ;;;
 ;;; TODO let joins use seq insetad of string

@@ -3863,8 +3863,7 @@
 
 (def __
   (fn [n]
-    (letfn [(balanced-str ; both check for balanced and convert to parens
-                [i]
+    (letfn [(balanced-str [i] ; both check for balanced and convert to parens
               ;; A trick to reduce the number of bits we check: we don't
               ;; need to check the first and last bits because the caller
               ;; has guaranteed that the high bit will be 1 and the low bit
@@ -3872,9 +3871,6 @@
               (loop [i (bit-shift-right i 1) ; skip low 0 bit
                      balance-num 1           ; account for low 0 bit
                      balanced-chars (transient [])]
-                ;; (cond (= i 1) (if (= balance-num 1) ; only high 1 bit is left
-                ;;                 (str "(" (apply str (-> balanced-chars persistent! reverse)) ")")
-                ;;                   nil)
                 (cond (= i 3) (if (= balance-num 2)
                                 (str "((" (apply str (-> balanced-chars persistent! reverse)) ")")
                                   nil)
@@ -3889,18 +3885,32 @@
                               (recur (bit-shift-right i 1)
                                      (if zero-bit (inc balance-num)
                                          (dec balance-num))
-                                     (conj! balanced-chars (if zero-bit \) \()))))))]
+                                     (conj! balanced-chars (if zero-bit \) \()))))))
+            (nums-to-check [n]
+              ;; Range: 1010...10 -- 111...000 (range's 2nd arg needs to be
+              ;; 1 larger than 111...000). We can skip odd numbers, too.
+              (range (reduce (fn [acc _] (+ (* acc 4) 2)) 0 (range 4))
+                     (inc (bit-shift-left (-> (Math/pow 2 n) int dec) n))
+                     2))]
       (if (zero? n) #{""}
           (set
-           ;; Range: 1010...10 --  111...000 (range 2nd arg needs to be +1)
-           (for [i (range (Integer/parseInt (apply str (repeat n "10")) 2)
-                          (inc (bit-shift-left (-> (Math/pow 2 n) int dec) n))
-                          2)       ; can skip odd numbers
+           (for [i (nums-to-check n)
                  :let [bal-str-or-nil (balanced-str i)]
                  :when bal-str-or-nil]
              bal-str-or-nil)))))
   )
 
+(defn format-binary [n]
+  (loop [n n
+         s ()]
+    (if (zero? n) (apply str s)
+        (recur (bit-shift-right n 1)
+               (conj s (if (zero? (bit-and n 1)) "0" "1"))))))
+
+(defn nums-to-check [n]
+              (range (reduce (fn [acc _] (+ (* acc n) 2)) 0 (range n))
+                     (inc (bit-shift-left (-> (Math/pow 2 n) int dec) n))
+                     2))               ; can skip odd numbers
 
 (defn __test []
 (and
