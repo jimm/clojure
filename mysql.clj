@@ -2,6 +2,8 @@
 
 (use 'clojure.contrib.sql)
 
+;;; See also clojure.core/resultset-seq
+
 ;;; This database doesn't exist anymore, and besides the db name, user name,
 ;;; and password below were only for dev mode. All three were completely
 ;;; different on staging and production.
