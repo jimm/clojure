@@ -3,8 +3,6 @@
 (def ^:dynamic *debug* false)
 
 (defn debug
-  "To stop debug output, comment out the `apply` form using
-  the #_ reader macro."
   [& args]
   (when *debug*
     (apply println args)))
