@@ -26,9 +26,9 @@
 
 (defn build-scene [scene]
   (let [geometry (THREE.IcosahedronGeometry. 200 1)
-        material (THREE.MeshBasicMaterial. #js {:color 0x000000
-                                                :wireframe true
-                                                :wireframeLinewidth 2})
+        material (THREE.MeshNormalMaterial. #js {:color 0x000000
+                                                 :wireframe false
+                                                 :wireframeLinewidth 2})
         mesh (THREE.Mesh. geometry material)]
 
     (.add scene mesh)
@@ -55,7 +55,7 @@
 
 (defn draw-frame [context scene-objs]
   (let [d (.now js/Date)]               ; use same rotation seed for all objs
-    (doseq [obj scene-objs] (rotate obj d))
+    (doseq [obj scene-objs] (rotate obj d)))
   (.render (:renderer context) (:scene context) (:camera context)))
 
 ;;; ================ main ================
