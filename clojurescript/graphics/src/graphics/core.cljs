@@ -1,26 +1,11 @@
 ;;; From example code at http://gamingjs.com/ice/
 
-(ns graphics.core)
+(ns graphics.core
+  (:use [graphics.context :only (make) :rename {make make-context}]
+        [graphics.camera :only (place) :rename {place place-camera}]
+        [graphics.animation :only (animate)]))
 
 ;; (enable-console-print!)
-
-;;; ================ context ================
-
-(defn make-scene [] (THREE.Scene.))
-
-(defn make-camera []
-  (THREE.PerspectiveCamera. 75 (/ (.-innerWidth js/window) (.-innerHeight js/window)) 1 1000))
-
-(defn make-renderer [] (THREE.CanvasRenderer.))
-
-(defn make-context []
-  {:scene (make-scene) :camera (make-camera) :renderer (make-renderer)})
-
-;;; ================ camera ================
-
-(defn place-camera [context]
-  (set! (-> context :camera .-position .-z) 500)
-  (.add (:scene context) (:camera context)))
 
 ;;; ================ scene building ================
 
@@ -36,17 +21,9 @@
 
 (defn make-objs [context]
   (place-camera context)
-  (let [renderer (:renderer context)]
-    (.setClearColorHex renderer 0xffffff)
-    (.setSize renderer window.innerWidth window.innerHeight)
-    (let [body (.-body js/document)
-          style (.-style body)]
-      (set! (.-margin style) 0)
-      (set! (.-overflow style) "hidden")
-      (.appendChild body (.-domElement renderer))))
   (build-scene (:scene context)))
 
-;;; ================ animation ================
+;;; ================ frame drawing ================
 
 (defn rotate [obj d]
   (let [rot (.-rotation obj)]
@@ -62,10 +39,7 @@
 
 (defn main []
   (let [context (make-context)
-        scene-objs (make-objs context)
-        animation (fn [f]
-                    (draw-frame context scene-objs)
-                    (js/requestAnimationFrame #(f f)))]
-    (animation animation)))
+        scene-objs (make-objs context)]
+    (animate draw-frame context scene-objs)))
 
 (main)
