@@ -4,9 +4,10 @@
   (:use [boids.context :only (make) :rename {make make-context}]
         [boids.camera :only (place) :rename {place place-camera}]
         [boids.animation :only (animate)]
-        [boids.flock :only (make move-boids) :rename {make make-flock}]))
+        [boids.flock :only (make move) :rename {make make-flock
+                                                move move-flock}]))
 
-(enable-console-print!)
+(enable-console-print!)                 ; DEBUG
 
 ;;; ================ scene building ================
 
@@ -20,7 +21,9 @@
 ;;; ================ frame drawing ================
 
 (defn draw-frame [context flock]
-  (move-boids context flock)
+  (println "draw-frame:")               ; DEBUG
+  (println (first flock))               ; DEBUG
+  (move-flock context flock)
   (.render (:renderer context) (:scene context) (:camera context)))
 
 ;;; ================ main ================

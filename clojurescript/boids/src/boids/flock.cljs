@@ -2,10 +2,11 @@
 
 (def num-boids 20)
 (def too-close-squared 64)
+(def too-fast 20)
 (def too-fast-squared 400)
 
 (defn make-boid-graphic [context]
-  (let [geometry (THREE.BoxGeometry. 5 5 5)
+  (let [geometry (THREE.CubeGeometry. 5 5 5)
         material (THREE.MeshNormalMaterial. #js {:color 0x000000
                                                  :wireframe false
                                                  :wireframeLinewidth 2})
@@ -72,20 +73,31 @@
 (defn limit-velocity [boid]
   (let [squared (apply + (map * (:velocity boid) (:velocity boid)))]
     (if (>= squared too-fast-squared)
-      (let [scale (/ too-fast-squared (Math/sqrt squared))]
+      (let [scale (/ too-fast (Math/sqrt squared))]
         (assoc boid :velocity
                (vec (map #(* scale %) (:velocity boid))))))))
 
-(defn move-boids [context flock]
+(defn update-graphic-loc [boid]
+  (let [pos (.-position (:graphic boid))
+        [x y z] (:loc boid)]
+    (set! (.-x x))
+    (set! (.-y y))
+    (set! (.-z z))))
+
+(defn move [context flock]
   (for [b flock]
     (let [others (remove #(= b %) flock)]
       (-> b
           (stay-together others)
           (avoid-other-boids others)
           (keep-up others)
+          limit-velocity
           add-velocity-to-position
-          limit-velocity))))
+          update-graphic-loc
+          identity))))
 
 (defn make [context]
-  (move-boids context
-              (for [_ (range num-boids)] (make-boid context))))
+  (let [flock (for [_ (range num-boids)] (make-boid context))]
+    (move context flock)
+    flock))
+        
