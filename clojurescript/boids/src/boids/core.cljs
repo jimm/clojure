@@ -21,10 +21,9 @@
 ;;; ================ frame drawing ================
 
 (defn draw-frame [context flock]
-  (println "draw-frame:")               ; DEBUG
-  (println (first flock))               ; DEBUG
-  (move-flock context flock)
-  (.render (:renderer context) (:scene context) (:camera context)))
+  (let [new-flock (move-flock context flock)]
+    (.render (:renderer context) (:scene context) (:camera context))
+    new-flock))
 
 ;;; ================ main ================
 

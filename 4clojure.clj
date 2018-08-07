@@ -3855,8 +3855,8 @@
 
 ;;; Binary representation of min and max values for n, where n = 4
 ;;; because it must start with 1 and end with 0:
-;;;     min 10000000
-;;;     max 11111111
+;;;     min 10001110
+;;;     max 11111110
 ;;; But they must have 4 1's, so we can further restrict min and max.
 ;;;     min 10101010
 ;;;     max 11110000
@@ -3908,9 +3908,11 @@
                (conj s (if (zero? (bit-and n 1)) "0" "1"))))))
 
 (defn nums-to-check [n]
-              (range (reduce (fn [acc _] (+ (* acc n) 2)) 0 (range n))
-                     (inc (bit-shift-left (-> (Math/pow 2 n) int dec) n))
-                     2))               ; can skip odd numbers
+  (let [min-num (Math/pow 2 n)
+
+  (range (reduce (fn [acc _] (+ (* acc n) 2)) 0 (range n))
+         (inc (bit-shift-left (-> (Math/pow 2 n) int dec) n))
+         2))                            ; can skip odd numbers
 
 (defn __test []
 (and
@@ -3920,4 +3922,4 @@
  (= (nth (sort (filter #(.contains ^String % "(()()()())") (__ 9))) 6) "(((()()()())(())))")
  (= (nth (sort (__ 12)) 5000) "(((((()()()()()))))(()))")
  )
-)
+  )

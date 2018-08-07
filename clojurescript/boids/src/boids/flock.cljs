@@ -17,14 +17,10 @@
 
 
 (defn make-boid [context]
-  {:graphic (make-boid-graphic context)
-   :loc [(rand 100) (rand 100) (rand 100)]
-   :velocity [(rand 10) (rand 10) (rand 10)]})
-
-;; (defn rotate [obj d]
-;;   (let [rot (.-rotation obj)]
-;;     (set! (.-x rot) (* d 0.0005))
-;;     (set! (.-y rot) (* d 0.001))))
+  (ref
+   {:graphic (make-boid-graphic context)
+    :loc [(rand 100) (rand 100) (rand 100)]
+    :velocity [(rand 10) (rand 10) (rand 10)]}))
 
 (defn center-of [flock key]
   (->> flock
@@ -85,19 +81,21 @@
     (set! (.-z z))))
 
 (defn move [context flock]
-  (for [b flock]
-    (let [others (remove #(= b %) flock)]
-      (-> b
-          (stay-together others)
-          (avoid-other-boids others)
-          (keep-up others)
-          limit-velocity
-          add-velocity-to-position
-          update-graphic-loc
-          identity))))
+  (dosync
+   (for [b flock]
+     (let [others (remove #(= b %) flock)]
+       (alter b #(-> %1
+                     (stay-together %2)
+                     (avoid-other-boids %2)
+                     (keep-up %2)
+                     limit-velocity
+                     add-velocity-to-position
+                     update-graphic-loc
+                     identity)
+              others))))
+  flock)
 
 (defn make [context]
   (let [flock (for [_ (range num-boids)] (make-boid context))]
     (move context flock)
     flock))
-        
